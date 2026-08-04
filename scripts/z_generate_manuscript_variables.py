@@ -1,52 +1,65 @@
 #!/usr/bin/env python3
-"""Thin orchestrator: generate and inject manuscript variables.
+"""ELEKTRA — hydrate manuscript ``{{TOKEN}}``s from config + measured model outputs.
 
-Reads experiment config and analysis outputs, writes
-``output/data/manuscript_variables.json``, and substitutes
-``{{TOKEN}}`` markers in manuscript sections into
-``output/manuscript/`` for PDF rendering.
+Usage:
+    uv run python scripts/z_generate_manuscript_variables.py [--allow-draft]
 
-All computation lives in ``src/manuscript_variables``;
-all injection lives in
-``infrastructure.rendering.manuscript_injection``.
-
-Exit codes:
-    0   variables written and injected successfully
-    1   unexpected error
+Strict by default: unresolved ``{{TOKEN}}``s in a manuscript section fail the
+run. ``--allow-draft`` writes the resolved tree anyway (intentional early
+drafts only). Writes ``output/data/manuscript_variables.json`` and the resolved
+tree under ``output/manuscript/``.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(_PROJECT_ROOT))
-sys.path.insert(0, str(_PROJECT_ROOT.parents[2]))
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from the_world_is_not_enough.manuscript_variables import (
+    generate_variables,
+    resolve_manuscript_tree,
+)
 
 
 def main() -> int:
-    """CLI entry point."""
-    parser = argparse.ArgumentParser(description="Generate manuscript variables for the_world_is_not_enough")
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--allow-draft",
         action="store_true",
-        help="Allow N/A fallbacks when analysis outputs are missing (non-pipeline draft mode)",
+        help="write even if tokens remain unresolved",
+    )
+    parser.add_argument("--config", default=None, help="path to manuscript/config.yaml")
+    parser.add_argument(
+        "--manuscript-dir", default=None, help="manuscript source directory"
+    )
+    parser.add_argument(
+        "--output-dir", default=None, help="output directory (default: <root>/output)"
     )
     args = parser.parse_args()
 
-    from infrastructure.rendering.manuscript_injection import write_resolved_manuscript_tree
-    from src.manuscript_variables import generate_variables, save_variables
+    variables = generate_variables(config_path=args.config)
+    output_root = Path(args.output_dir) if args.output_dir else ROOT / "output"
 
-    variables = generate_variables(
-        _PROJECT_ROOT,
-        require_analysis_outputs=not args.allow_draft,
+    variables_path = output_root / "data" / "manuscript_variables.json"
+    variables_path.parent.mkdir(parents=True, exist_ok=True)
+    variables_path.write_text(
+        json.dumps(variables, sort_keys=True, indent=2), encoding="utf-8"
     )
-    out_path = _PROJECT_ROOT / "output" / "data" / "manuscript_variables.json"
-    save_variables(variables, out_path)
-    write_resolved_manuscript_tree(_PROJECT_ROOT, variables)
-    print(str(out_path))
+
+    resolve_manuscript_tree(
+        variables,
+        manuscript_dir=args.manuscript_dir,
+        output_dir=output_root / "manuscript",
+        strict=not args.allow_draft,
+    )
+    print(f"Resolved {len(variables)} manuscript variables -> {variables_path}")
     return 0
 
 

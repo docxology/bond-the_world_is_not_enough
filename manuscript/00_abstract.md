@@ -1,11 +1,27 @@
-# Abstract {#sec:abstract}
+# Abstract
 
-This paper presents a convergence study of **fixed-step gradient descent** on a convex quadratic, framed as the computational exemplar of the [Research Project Template](https://github.com/docxology/template). The implementation lives in `projects/working/bond/the_world_is_not_enough/src/optimizer.py`; experiments and figures are orchestrated by `projects/working/bond/the_world_is_not_enough/scripts/optimization_analysis.py` and hydrated into the manuscript through `scripts/z_generate_manuscript_variables.py`, so tables and prose track `output/data/optimization_results.csv` after every pipeline run.
+In *The World Is Not Enough* (1999), mission codename **ELEKTRA**, we develop
+deterministic special-agent mission software across three operational pillars:
 
-We evaluate {{CONFIG_NUM_STEP_SIZES}} step sizes from $\alpha = {{CONFIG_MIN_STEP_SIZE}}$ to $\alpha = {{CONFIG_MAX_STEP_SIZE}}$, spanning conservative, near-optimal, aggressive, and divergent regimes for a unit Hessian model. The build chain exercises template infrastructure end-to-end: scientific helpers (`infrastructure.scientific.stability`, `infrastructure.scientific.benchmarking`), validation, rendering (`infrastructure/rendering/pdf_renderer.py`), and reporting. Accessibility-oriented plotting defaults (colourblind-safe palette, 300 dpi exports) are centralized in `src/figures/` and `src/analysis/`.
+1. **Oil-pipeline security** — a capacitated flow model of a Caspian crude
+   trunk is analysed with the Edmonds–Karp max-flow/min-cut algorithm and
+   Brandes edge-betweenness to isolate choke points, then subjected to a
+   deterministic tamper-interdiction simulation. The analysis surfaces a
+   single principal choke point (**{{RESULT_TOP_CHOKE_POINT}}**) carrying the
+   corridor at full rated capacity (max flow {{RESULT_MAX_FLOW}} kbbl/day,
+   min-cut capacity {{RESULT_MIN_CUT_CAPACITY}} kbbl/day).
+2. **Nuclear-submarine defense** — a passive-sonar equation (spherical
+   spreading plus absorption) turns each listening sensor's range into a
+   detection-probability field via the normal CDF; Dijkstra's algorithm then
+   routes the *King William* from origin to safety. Least-risk routing cuts
+   cumulative detection exposure by **{{RESULT_EXPOSURE_REDUCTION}}%** relative
+   to line-of-sight.
+3. **Hostage-psychology influence** — a four-state ODE model of hostage–captor
+   dynamics (fear, gratitude, identification, threat) integrated with a fixed
+   RK4 scheme reproduces the qualitative onset of Stockholm syndrome, with the
+   syndrome index crossing the onset threshold on day
+   **{{RESULT_SYNDROME_ONSET_DAY}}** and reaching a final value of
+   **{{RESULT_SYNDROME_FINAL}}**.
 
-Contributions are **methodological** and **architectural**. On the methods side, we relate empirical iteration counts and error decay to the scalar contraction factor $\rho(\alpha) = |1-\alpha|$ and document cases where runs hit $N_{\max} = {{CONFIG_MAX_ITERATIONS}}$ before meeting the gradient tolerance. On the architecture side, we demonstrate a zero-mock test suite on project `src/` (see [test_optimizer.py](https://github.com/docxology/template/blob/main/projects/working/bond/the_world_is_not_enough/tests/test_optimizer.py)), automated six-figure analysis, and reproducibility metadata (configuration hash, artifact counts) injected into [@sec:reproducibility].
-
-**Results (this configuration):** {{RESULT_NUM_CONVERGED}} of {{CONFIG_NUM_STEP_SIZES}} grid points report `converged=True` in the CSV; non-convergent rows flag either slow progress at small $\alpha$ under the iteration cap or instability when $|1-\alpha| \geq 1$. The analytical minimizer remains $x^\ast = {{RESULT_OPTIMUM_X}}$ with $f(x^\ast) = {{RESULT_OPTIMUM_F}}$ for the configured $(A,b)$.
-
-**Keywords:** {{CONFIG_KEYWORDS}}
+All results are real model outputs, produced deterministically under seed
+{{CONFIG_SEED}}; no metric in this manuscript is hand-authored.

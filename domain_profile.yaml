@@ -1,49 +1,33 @@
-domain: code_research
-display_name: Code Research Exemplar
-required_packages:
-  - numpy
-  - matplotlib
-  - pytest
-preferred_outputs:
-  - pdf
-  - html
-  - docx
-  - epub
-validation_gates:
-  - experiment_method_design
-  - artifact_manifest
-  - evidence_grounding
-  - render_validation
-  - publication_readiness
-figure_types:
-  - convergence_plot
-  - performance_benchmark
-  - sensitivity_analysis
-citation_policy: official_or_scholarly
-source_policy: "Prefer primary project outputs, official package documentation, and scholarly optimization references."
+# Domain profile for the_world_is_not_enough (ELEKTRA)
+# Advisory, declarative controls for the mission package. Validation inputs only.
+
+mission:
+  film: "The World Is Not Enough (1999)"
+  codename: "ELEKTRA"
+  package: "the_world_is_not_enough"
+  protocol: "bond_api.MissionProvider (frozen)"
+
 review_gates:
-  - experiment_method_design
-  - render_validation
-  - publication_readiness
+  - "pytest tests/ --cov=src --cov-fail-under=90"
+  - "ruff check src/ scripts/ tests/"
+  - "ruff format --check src/ scripts/ tests/"
+  - "mypy src/ scripts/"
+
+source_policy:
+  - "pure domain core importable without bond_api"
+  - "no external network calls in domain core"
+  - "deterministic: fixed seed, no untracked RNG, wall_time_s = 0.0"
+
 artifact_expectations:
-  - output/data/manuscript_variables.json
-  - output/data/optimization_results.csv
-  - output/figures/convergence_plot.png
-  - output/reports/validation_report.json
-  - output/pdf/template_code_project_combined.pdf
+  output_figures:
+    - "output/figures/pipeline_network.png"
+    - "output/figures/submarine_detection.png"
+    - "output/figures/hostage_dynamics.png"
+  output_data:
+    - "output/data/manuscript_variables.json"
+    - "output/data/elektra_mission.json"
+
 benchmark_rubric:
-  name: code-research-readiness
-  dimensions:
-    - name: output_validity
-      weight: 1.0
-    - name: reproducibility_bundle
-      weight: 1.0
-    - name: artifact_manifest
-      weight: 1.0
-    - name: evidence_grounding
-      weight: 2.0
-    - name: render_success
-      weight: 1.0
-    - name: publication_readiness
-      weight: 1.0
-llm_prompt_guidance: "Use generated optimization artifacts and manuscript variables as the evidence source; do not invent numeric results."
+  coverage_fail_under: 90
+  mock_policy: "zero mocks"
+  determinism: "obligatory"

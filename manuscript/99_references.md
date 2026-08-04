@@ -1,10 +1,9 @@
-# References {#sec:references}
+# References
 
-Bibliography lives in [`manuscript/references.bib`](references.bib) and is read by Pandoc during PDF render. The build pipeline invokes Pandoc with `--natbib`, so every `[@key]` citation in the manuscript is rewritten to the appropriate `\cite{}`/`\citep{}`/`\citet{}` LaTeX command and resolved against the bib file.
+See `references.bib` for the full BibTeX records. Key citations by pillar:
 
-To validate that `references.bib` is syntactically clean and contains the required fields per entry type:
-
-```bash
-uv run python -m infrastructure.reference.citation.cli validate \
-    projects/working/bond/the_world_is_not_enough/manuscript/references.bib --strict
-```
+- **Flow / choke points**: Ford–Fulkerson (1956); Edmonds–Karp (1972);
+  Brandes (2001).
+- **Routing**: Dijkstra (1959).
+- **Passive sonar**: Urick (1983).
+- **Hostage psychology**: Namnyak *et al.* (2008); de Fabrique *et al.* (2007).

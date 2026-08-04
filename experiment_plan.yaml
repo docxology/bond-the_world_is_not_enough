@@ -1,25 +1,28 @@
-conditions:
-  - name: conservative_step
-    role: reference
-    description: "Stable gradient-descent step below the spectral bound."
-  - name: near_optimal_step
-    role: proposed
-    description: "Template-recommended step near the stable convergence region."
-  - name: aggressive_step
-    role: variant
-    description: "Stress condition near or above the stability boundary."
-metrics:
-  primary:
-    name: objective_value
-    direction: minimize
-protocol: "Run the deterministic quadratic optimization sweep with identical initialization, seeds, tolerance, and iteration cap across all declared step-size conditions."
-expected_figures:
-  - fig:convergence_plot
-  - fig:performance_benchmark
-  - fig:step_size_sensitivity
+# Experiment plan for the_world_is_not_enough (ELEKTRA)
+# Prespecified conditions, metrics, and expected artifacts.
+
+experiment:
+  seed: 1999
+  primary_metric: "choke_point_count + exposure_reduction + syndrome_onset_day"
+  baseline: "naive 4-connected line-of-sight exposure (submarine pillar)"
+  ablation:
+    - "no-kindness regime: syndrome stays below onset threshold"
+    - "sensor coverage absent: tamper detection rate drops to 0"
+
+pillars:
+  pipeline:
+    model: "capacitated flow network (Edmonds-Karp max-flow/min-cut, betweenness, utilization)"
+    dataset: "fixed 17-node / 16-edge Caspian trunk"
+    expected_figures: ["pipeline_network.png"]
+  submarine:
+    model: "passive sonar equation + normal-CDF detection + Dijkstra evasion"
+    scenario: "16x16 grid, 3 sensors, 3 km cells"
+    expected_figures: ["submarine_detection.png"]
+  hostage:
+    model: "4-state Stockholm-syndrome ODE, RK4 integration"
+    scenario: "30 days, dt=0.25, onset threshold 0.5"
+    expected_figures: ["hostage_dynamics.png"]
+
 expected_tables:
-  - tbl:optimization_results
-baselines:
-  - conservative_step
-ablations:
-  - aggressive_step
+  - "config token table (manuscript/05_experimental_setup.md)"
+  - "artifact inventory (manuscript/06_reproducibility.md)"

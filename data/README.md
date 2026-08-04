@@ -1,13 +1,12 @@
-# the_world_is_not_enough/data
+# data/ — the_world_is_not_enough (ELEKTRA)
 
-Project-maintained **inputs** for the code exemplar (not pipeline outputs).
+Small declarative data overlays.
 
-## Quick reference
-
-| File | Role |
+| File | Purpose |
 | --- | --- |
-| `claim_ledger.yaml` | Source-backed numeric and artifact claims for evidence validation |
+| `claim_ledger.yaml` | Registers sourced/computed numeric claims for evidence validation |
+| `README.md`, `AGENTS.md` | This directory |
 
-Generated analysis outputs belong under `output/` during pipeline runs, not here.
-
-Schema and edit protocol: [`AGENTS.md`](AGENTS.md).
+The heavier mission datasets (pipeline topology, sensor positions) live as
+constants in the domain modules (`src/`) by design — close to the code that
+consumes them and deterministic.

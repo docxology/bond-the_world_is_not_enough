@@ -1,31 +1,32 @@
 {
-  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
-  "@type": "SoftwareSourceCode",
+  "$schema": "https://codemeta.github.io/schema",
+  "name": "the_world_is_not_enough",
+  "version": "0.1.0",
+  "description": "ELEKTRA — Special-Agent Mission Software: oil-pipeline choke-point security, nuclear-submarine defense, and hostage-psychology influence modeling.",
   "author": [
     {
-      "@id": "https://orcid.org/0000-0001-6232-9096",
       "@type": "Person",
-      "affiliation": {
-        "@type": "Organization",
-        "name": "Active Inference Institute"
-      },
+      "givenName": "Daniel Ari",
       "familyName": "Friedman",
-      "givenName": "Daniel Ari"
+      "identifier": "https://orcid.org/0000-0001-6232-9096"
     }
   ],
-  "codeRepository": "https://github.com/docxology/the_world_is_not_enough",
-  "dateModified": "2026-07-10",
-  "identifier": "10.5281/zenodo.20417136",
-  "keywords": [
-    "optimization algorithms",
-    "gradient descent",
-    "convergence analysis",
-    "numerical methods",
-    "mathematical programming",
-    "reproducible research",
-    "infrastructure automation"
-  ],
+  "codeRepository": null,
   "license": "https://spdx.org/licenses/MIT",
-  "name": "Convergence Analysis of Gradient Descent Optimization",
-  "version": "2.5.2"
+  "dateCreated": "2026-08-04",
+  "keywords": [
+    "oil-pipeline security",
+    "max-flow / min-cut",
+    "passive sonar equation",
+    "evasion routing",
+    "hostage psychology",
+    "Stockholm syndrome"
+  ],
+  "programmingLanguage": [
+    "Python 3"
+  ],
+  "operatingSystem": [
+    "macOS",
+    "Linux"
+  ]
 }

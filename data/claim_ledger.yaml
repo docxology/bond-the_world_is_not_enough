@@ -1,57 +1,36 @@
+# Claim ledger for the_world_is_not_enough (ELEKTRA)
+# Registers sourced/computed numeric claims for evidence validation.
+# All RESULT_* claims are computed by the domain models deterministically
+# (seed 1999); provenance is auditable via output/data/elektra_mission.json.
+
 claims:
-  - claim_id: figure-export-dpi
-    kind: number
-    value: 300
-    source: projects/working/bond/the_world_is_not_enough/src/viz_config.py plotting defaults (dpi)
-    source_tier: project_source
-    freshness: active
-    artifact_path: output/figures/convergence_plot.png
-  - claim_id: step-size-sensitivity-cap
-    kind: number
-    value: 500
-    source: projects/working/bond/the_world_is_not_enough/src/sweeps.py sensitivity_sweep max_iter cap
-    source_tier: generated_metric
-    freshness: active
-    artifact_path: output/figures/step_size_sensitivity.png
-  - claim_id: stability-log-lower
-    kind: number
-    value: -6
-    source: projects/working/bond/the_world_is_not_enough/src/figures/scientific_stability.py stability visualization caption
-    source_tier: project_source
-    freshness: active
-    artifact_path: output/figures/stability_analysis.png
-  - claim_id: solution-relative-error-exponent
-    kind: number
-    value: -4
-    source: projects/working/bond/the_world_is_not_enough/manuscript/03_results.md stated precision threshold
-    source_tier: manuscript_claim
-    freshness: active
-    artifact_path: manuscript/03_results.md
-  - claim_id: stability-log-upper
-    kind: number
-    value: -9
-    source: projects/working/bond/the_world_is_not_enough/src/figures/scientific_stability.py stability visualization caption
-    source_tier: project_source
-    freshness: active
-    artifact_path: output/figures/stability_analysis.png
-  - claim_id: benchmark-tolerance-exponent
-    kind: number
-    value: -10
-    source: projects/working/bond/the_world_is_not_enough/scripts/optimization_analysis.py dimensional benchmark tolerance
-    source_tier: project_source
-    freshness: active
-    artifact_path: output/figures/performance_benchmark.png
-  - claim_id: benchmark-min-iterations
-    kind: number
-    value: 219
-    source: projects/working/bond/the_world_is_not_enough/manuscript/03_results.md benchmark caption
-    source_tier: manuscript_claim
-    freshness: active
-    artifact_path: output/figures/performance_benchmark.png
-  - claim_id: benchmark-max-iterations
-    kind: number
-    value: 238
-    source: projects/working/bond/the_world_is_not_enough/manuscript/03_results.md benchmark caption
-    source_tier: manuscript_claim
-    freshness: active
-    artifact_path: output/figures/performance_benchmark.png
+  - id: "elektra.max_flow"
+    claim: "maximum deliverable pipeline flow"
+    value: "420"
+    unit: "kbbl/day"
+    source: "src/the_world_is_not_enough/pipeline_security.py::edmonds_karp(default_pipeline())"
+    evidence: "RESULT_MAX_FLOW"
+  - id: "elektra.min_cut_capacity"
+    claim: "minimum s-t cut capacity (== max flow)"
+    value: "420"
+    unit: "kbbl/day"
+    source: "src/the_world_is_not_enough/pipeline_security.py::min_cut_edges"
+    evidence: "RESULT_MIN_CUT_CAPACITY"
+  - id: "elektra.choke_point_count"
+    claim: "load-bearing segments running at >=90% capacity"
+    value: "1"
+    unit: "segments"
+    source: "src/the_world_is_not_enough/pipeline_security.py::analyze_choke_points"
+    evidence: "RESULT_CHOKE_POINT_COUNT"
+  - id: "elektra.exposure_reduction"
+    claim: "relative reduction in cumulative detection exposure from least-risk routing"
+    value: "0.249"
+    unit: "fraction"
+    source: "src/the_world_is_not_enough/sub_defense.py::evasion_analysis"
+    evidence: "RESULT_EXPOSURE_REDUCTION"
+  - id: "elektra.syndrome_onset_day"
+    claim: "day the syndrome index first crosses the onset threshold"
+    value: "11.25"
+    unit: "days"
+    source: "src/the_world_is_not_enough/hostage_psychology.py::integrate_dynamics"
+    evidence: "RESULT_SYNDROME_ONSET_DAY"

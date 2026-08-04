@@ -1,22 +1,24 @@
-authors:
-- affiliation: Active Inference Institute
-  family-names: Friedman
-  given-names: Daniel Ari
-  orcid: 0000-0001-6232-9096
 cff-version: 1.2.0
-date-released: '2026-07-10'
-doi: 10.5281/zenodo.20417136
+message: "If you use this software, please cite it as below."
+title: "The World Is Not Enough: ELEKTRA — Special-Agent Mission Software"
+abstract: >-
+  Deterministic BOND suite mission software modeling oil-pipeline
+  choke-point security (max-flow/min-cut, betweenness, tamper simulation),
+  nuclear-submarine defense (passive-sonar detection and least-risk evasion
+  routing), and hostage-psychology influence dynamics (Stockholm-syndrome ODE
+  model). All results are reproducible under a fixed seed.
+authors:
+  - family-names: Friedman
+    given-names: Daniel Ari
+    orcid: "https://orcid.org/0000-0001-6232-9096"
+    affiliation: "Active Inference Institute"
+version: "0.1.0"
+date-released: "2026-08-04"
+license: "MIT"
 keywords:
-- optimization algorithms
-- gradient descent
-- convergence analysis
-- numerical methods
-- mathematical programming
-- reproducible research
-- infrastructure automation
-license: MIT
-message: If you use this software, please cite it using the metadata from this file.
-repository-code: https://github.com/docxology/the_world_is_not_enough
-title: Convergence Analysis of Gradient Descent Optimization
-type: software
-version: 2.5.2
+  - "oil-pipeline security"
+  - "max-flow / min-cut"
+  - "passive sonar equation"
+  - "evasion routing"
+  - "hostage psychology"
+  - "Stockholm syndrome"

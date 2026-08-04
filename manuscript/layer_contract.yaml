@@ -1,5 +1,49 @@
-# Code-centric exemplar: optional monorepo adapters only.
-allow_infrastructure_imports:
-  - src/analysis/_infra.py
-  - src/_runtime.py
-  - src/benchmark_support.py
+# Layer contract for the_world_is_not_enough (ELEKTRA)
+# Enforced conceptually by the guardrail preamble; audited by review passes.
+
+layers:
+  source:
+    description: "Pure domain core"
+    modules:
+      - "src/the_world_is_not_enough/pipeline_security.py"
+      - "src/the_world_is_not_enough/sub_defense.py"
+      - "src/the_world_is_not_enough/hostage_psychology.py"
+    rules:
+      - "no import of bond_api or bond_utilities"
+      - "stdlib + numpy + matplotlib only; deterministic"
+    permitted_runtime_deps:
+      - "numpy"
+      - "matplotlib"
+      - "stdlib"
+
+  protocol_adapter:
+    description: "Thin bond_api MissionProvider adapter"
+    module: "src/the_world_is_not_enough/mission.py"
+    rules:
+      - "imports bond_api.protocol + bond_api.registry"
+      - "exposes a top-level MissionProvider named by the discovery contract"
+      - "registers domain capabilities in a GadgetRegistry at import"
+      - "returns protocol dataclasses; mission outcome carries Provenance; wall_time_s=0"
+
+  manuscript:
+    description: "Token hydration + deterministic figures"
+    modules:
+      - "src/the_world_is_not_enough/manuscript_variables.py"
+      - "src/the_world_is_not_enough/figures.py"
+    rules:
+      - "metrics flow from config.yaml + measured model outputs, never hand-authored"
+      - "figures are Agg/headless and deterministic; no wall-clock"
+
+  scripts:
+    description: "Thin orchestrators per mission phase"
+    paths:
+      - "scripts/brief.py"
+      - "scripts/recon.py"
+      - "scripts/plan.py"
+      - "scripts/execute.py"
+      - "scripts/debrief.py"
+      - "scripts/generate_figures.py"
+      - "scripts/z_generate_manuscript_variables.py"
+    rules:
+      - "may import bond_api, bond_utilities, and the package src"
+      - "business logic stays in src/; scripts only shape argv and print"

@@ -1,82 +1,28 @@
-# src/ - Project Logic
+# src/ — the_world_is_not_enough (ELEKTRA)
 
-Core optimization algorithms, shared experiment configuration, analysis builders, figure generators, dashboard payloads, and manuscript-variable extraction for the code exemplar. Mathematical primitives stay pure; generated-output workflows live in importable modules so scripts remain thin wrappers.
+The domain core and protocol adapter, organized in dependency order.
 
-## Quick Start
+## Modules
 
-```python
-import logging
+| Module | Layer | Responsibility |
+| --- | --- | --- |
+| `pipeline_security.py` | pure core | Flow network (17-node Caspian trunk), Edmonds–Karp max-flow/min-cut, Brandes betweenness, capacity utilization, sensor coverage, deterministic tamper simulation, `analyze_choke_points` |
+| `sub_defense.py` | pure core | Passive-sonar equation + normal-CDF detection link, risk map, Dijkstra least-risk evasion, bearing triangulation |
+| `hostage_psychology.py` | pure core | Four-state Stockholm-syndrome ODE (fear/gratitude/identification/threat) with fixed-step RK4, onset/peak/final + influence metrics |
+| `figures.py` | manuscript | Three deterministic concept figures (headless `Agg`) |
+| `manuscript_variables.py` | manuscript | `{{TOKEN}}` hydration from `manuscript/config.yaml` + measured outputs |
+| `mission.py` | protocol adapter | `ELEKTRA` `MissionProvider` (frozen `bond_api`), `GADGETS` registration |
 
-import numpy as np
-from optimizer import gradient_descent, quadratic_function
+## Import rules
 
-logger = logging.getLogger(__name__)
+- Pure core (`pipeline_security`, `sub_defense`, `hostage_psychology`):
+  stdlib + numpy/matplotlib only. **No** `bond_api`, **no** `bond_utilities`.
+- `figures.py`, `manuscript_variables.py`: may import `yaml` and the pure core.
+- `mission.py`: the only module importing `bond_api`.
+- The package `__init__.py` exposes only the pure core (bond-free import
+  guarantee); `mission.py` is imported explicitly by discovery and scripts.
 
-# Simple optimization example
-result = gradient_descent(
-    initial_point=np.array([0.0]),
-    objective_func=lambda x: quadratic_function(x),
-    gradient_func=lambda x: x - 1,  # Gradient of f(x) = 0.5*x^2 - x
-    step_size=0.1
-)
+## Determinism
 
-logger.info(f"Optimal solution: {result.solution}")
-```
-
-## Key Features
-
-- **Gradient descent** optimization algorithm
-- **Quadratic function** evaluation, gradients, and analytical optimum (`quadratic_optimum`)
-- **Shared experiment config** in `experiment_config.py` (single loader for `manuscript/config.yaml`)
-- **Importable analysis pipeline** in `analysis/`
-- **Matplotlib figures** in `figures/`
-- **Plotly dashboard builder** in `dashboard.py`
-- **Manuscript `{{TOKEN}}` map** in `manuscript_variables.py`
-- **API reference builder** in `documentation.py` (invoked by `scripts/generate_api_docs.py`)
-- **Reproducible results** with deterministic behavior
-- **Type-safe** with type hints
-
-## Common Commands
-
-### Import and Use
-
-```python
-from experiment_config import load_experiment_config
-from optimizer import (
-    gradient_descent,
-    quadratic_function,
-    compute_gradient,
-    quadratic_optimum,
-    OptimizationResult,
-)
-
-cfg = load_experiment_config()
-x_star, f_star = quadratic_optimum(cfg.A_array(), cfg.b_array())
-```
-
-### Run Tests
-
-```bash
-cd projects/working/bond/the_world_is_not_enough
-uv run pytest tests/ --cov=src --cov-fail-under=90
-```
-
-## Architecture
-
-```mermaid
-graph TD
-    YAML[manuscript/config.yaml] --> CFG[experiment_config.py]
-    CFG --> ANA[analysis/]
-    CFG --> FIG[figures/]
-    CFG --> DASH[dashboard.py]
-    CFG --> VARS[manuscript_variables.py]
-
-    ANA --> OPT[optimizer.py]
-    FIG --> OPT
-    DASH --> OPT
-    VARS --> OPT
-```
-
-## More Information
-
-See [AGENTS.md](AGENTS.md) for technical documentation.
+Fixed seed `1999`; `random.Random` for tamper draws; `wall_time_s=0.0`; no
+wall-clock in results. Everything is byte-reproducible.

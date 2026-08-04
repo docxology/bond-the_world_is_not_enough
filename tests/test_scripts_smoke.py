@@ -1,70 +1,128 @@
-"""Smoke tests for auxiliary pipeline scripts (non-gated)."""
+"""Subprocess smoke tests for the ELEKTRA phase CLIs and artifact scripts.
+
+Each phase script must exit 0 and emit canonical BOND-API JSON; the figure and
+manuscript-variable scripts must produce their artifacts. Real subprocesses,
+no mocks.
+"""
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_generate_api_docs_writes_reference() -> None:
-    """generate_api_docs.py is aesthetic-only but should run without error."""
-    script = PROJECT_ROOT / "scripts" / "generate_api_docs.py"
-    result = subprocess.run(
-        [sys.executable, str(script)],
-        cwd=PROJECT_ROOT,
+def run_script(name: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / name)],
+        cwd=str(ROOT),
         capture_output=True,
         text=True,
-        timeout=120,
         check=False,
     )
-    assert result.returncode == 0, result.stderr or result.stdout
-    api_ref = PROJECT_ROOT / "output" / "docs" / "api_reference.md"
-    assert api_ref.is_file()
-    body = api_ref.read_text(encoding="utf-8")
-    assert "gradient_descent" in body.lower()
 
 
-def test_preflight_script_emits_diagnostics() -> None:
-    """00_preflight.py is aesthetic-only; exit 0 when no render mermaid, exit 1 when chrome absent."""
-    script = PROJECT_ROOT / "scripts" / "00_preflight.py"
-    result = subprocess.run(
-        [sys.executable, str(script)],
-        cwd=PROJECT_ROOT,
-        capture_output=True,
-        text=True,
-        timeout=120,
-        check=False,
-    )
-    assert result.returncode in (0, 1), result.stderr or result.stdout
-    combined = f"{result.stdout}\n{result.stderr}".lower()
-    if result.returncode == 1:
-        assert any(token in combined for token in ("preflight", "puppeteer", "mmdc"))
+def json_output(name: str) -> dict:
+    proc = run_script(name)
+    assert proc.returncode == 0, f"{name} failed: {proc.stderr}"
+    return json.loads(proc.stdout)
 
 
-def test_run_api_doc_generation_continues_when_glossary_index_fails(tmp_path: Path) -> None:
-    """Glossary index failure is logged; static api_reference.md still written."""
-    repo_root = PROJECT_ROOT.parent.parent
-    src_path = str(PROJECT_ROOT / "src")
-    for path in (str(repo_root), src_path):
-        if path not in sys.path:
-            sys.path.insert(0, path)
+class TestPhaseScripts:
+    def test_brief(self) -> None:
+        data = json_output("brief.py")
+        assert data.get("__bond_type__") == "MissionBrief"
+        assert data["codename"] == "ELEKTRA"
 
-    scripts_dir = str(PROJECT_ROOT / "scripts")
-    if scripts_dir not in sys.path:
-        sys.path.insert(0, scripts_dir)
-    import generate_api_docs as api_docs_mod
+    def test_recon(self) -> None:
+        data = json_output("recon.py")
+        assert data.get("__bond_type__") == "ReconReport"
+        assert data["findings"]["__bond_type__"] == "tuple"
 
-    def _fail(_src: str) -> list:
-        raise ValueError("glossary index unavailable")
+    def test_plan(self) -> None:
+        data = json_output("plan.py")
+        assert data.get("__bond_type__") == "MissionPlan"
 
-    project_root = tmp_path
-    (project_root / "src").mkdir()
-    result = api_docs_mod.run_api_doc_generation(project_root, api_index_builder=_fail)
-    assert result is not None
-    api_ref = project_root / "output" / "docs" / "api_reference.md"
-    assert api_ref.is_file()
-    assert result["glossary"] is None
-    assert result["api_reference"] == str(api_ref)
+    def test_execute(self) -> None:
+        data = json_output("execute.py")
+        assert data.get("__bond_type__") == "MissionOutcome"
+        assert data["success"] is True
+        assert data["results"]["choke_point_count"] == 1
+
+    def test_debrief(self) -> None:
+        data = json_output("debrief.py")
+        assert data.get("__bond_type__") == "Debrief"
+        assert data["lessons"]["__bond_type__"] == "tuple"
+
+
+class TestFigureScript:
+    def test_generates_three_pngs(self, tmp_path: Path) -> None:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "generate_figures.py"),
+                "--output-dir",
+                str(tmp_path),
+            ],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert proc.returncode == 0, proc.stderr
+        for name in (
+            "pipeline_network.png",
+            "submarine_detection.png",
+            "hostage_dynamics.png",
+        ):
+            assert (tmp_path / name).is_file(), f"missing {name}: {proc.stdout}"
+
+
+class TestManuscriptVariableScript:
+    def test_writes_json_and_tree(self, tmp_path: Path) -> None:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "z_generate_manuscript_variables.py"),
+                "--output-dir",
+                str(tmp_path),
+            ],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert proc.returncode == 0, proc.stderr
+        variables = json.loads(
+            (tmp_path / "data" / "manuscript_variables.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert variables["MISSION_CODENAME"] == "ELEKTRA"
+        # resolved tree written (sections exist under output/manuscript)
+        sections = list((tmp_path / "manuscript").glob("[0-9][0-9]_*.md"))
+        assert len(sections) >= 3
+
+
+class TestExecutePersistence:
+    def test_writes_provenance_record(self, tmp_path: Path) -> None:
+        # execute.py writes to <package>/output/data by default; the tmp_path
+        # is kept so the record is exercised through the real script's default.
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "execute.py")],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert proc.returncode == 0, proc.stderr
+        default_record = ROOT / "output" / "data" / "elektra_mission.json"
+        assert default_record.is_file()
+        record = json.loads(default_record.read_text(encoding="utf-8"))
+        assert record["mission_id"] == "the_world_is_not_enough"
+        assert record["codename"] == "ELEKTRA"
+        assert "input_hash" in record["provenance"]
+        assert record["provenance"]["seed"] == 1999

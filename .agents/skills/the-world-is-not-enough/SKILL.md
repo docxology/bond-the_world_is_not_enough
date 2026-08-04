@@ -1,53 +1,55 @@
 ---
 name: the-world-is-not-enough
-description: Code-centric optimization research exemplar — gradient descent, convergence analysis, automated figures, dashboard, and publication-quality PDF.
-version: 0.1.0
-author: docxology
-license: MIT
-tags: [exemplar, code, optimization, thin-orchestrator]
+description: In-repo skill for the ELEKTRA BOND film package (The World Is Not Enough, 1999). Mission codename ELEKTRA.
+version: 1.0.0
+tags: [bond, film, elektra, pipeline-security, submarine-defense, hostage-psychology]
 ---
 
-# the-world-is-not-enough
+# the-world-is-not-enough (ELEKTRA)
 
-Project-scoped skill for the in-repo exemplar at
-`projects/working/bond/the_world_is_not_enough/`. Load this when working inside the project.
+BOND suite film package for *The World Is Not Enough* (1999), mission codename
+ELEKTRA. Models three deterministic pillars and adapts them to the frozen
+`bond_api` `MissionProvider` protocol.
 
-## When to Use
+## When to use
 
-- Working inside the `the_world_is_not_enough` exemplar — running scripts, editing source,
-  or regenerating outputs.
-- Forking this exemplar as the starting scaffold for a new research project.
-- Validating that the exemplar's contracts (thin-orchestrator, layer boundaries,
-  no-mocks testing) still hold after changes.
+- Building or maintaining `projects/working/bond/the_world_is_not_enough/`.
+- Extending the three pillar models or the mission adapter.
 
-## Quick Reference
+## Quick reference
 
 ```bash
-# From the repository root
-uv run pytest projects/working/bond/the_world_is_not_enough/tests --cov=projects/working/bond/the_world_is_not_enough/src --cov-fail-under=90
-uv run python scripts/pipeline/stage_02_analysis.py --project templates/the_world_is_not_enough
-uv run python scripts/pipeline/stage_03_render.py --project templates/the_world_is_not_enough
-uv run python scripts/pipeline/stage_04_validate.py --project templates/the_world_is_not_enough
-uv run python scripts/pipeline/stage_05_copy.py --project templates/the_world_is_not_enough
+# Gates
+uv run pytest tests/ --cov=src --cov-fail-under=90
+uv run ruff check src/ scripts/ tests/ && uv run ruff format src/ scripts/ tests/
+uv run mypy src/ scripts/
+
+# Mission + artifacts
+uv run python scripts/execute.py                       # outcome + provenance record
+uv run python scripts/generate_figures.py              # 3 concept figures
+uv run python scripts/z_generate_manuscript_variables.py   # token hydration
 ```
+
+## Pillars
+
+- `pipeline_security.py` — flow network (17-node Caspian trunk); Edmonds–Karp
+  max-flow/min-cut, Brandes betweenness, capacity utilization, tamper sim.
+- `sub_defense.py` — passive-sonar equation + normal-CDF detection, risk map,
+  Dijkstra least-risk evasion, bearing triangulation.
+- `hostage_psychology.py` — four-state Stockholm-syndrome ODE with fixed-step
+  RK4 (onset/peak/final + influence ratio).
+
+`mission.py` implements `MissionProvider` (film=`the_world_is_not_enough`,
+codename=`ELEKTRA`, seed=`1999`) and registers `GADGETS`. The pure core is
+bond-free.
 
 ## Pitfalls
 
-- **Keep scripts thin.** Business logic belongs in `src/` or shared
-  `infrastructure/`, not in `scripts/`.
-- **No mocks.** All tests must use real data, real files, and real
-  computation.
-- **Outputs are disposable.** Never hand-edit `output/` — regenerate from
-  source and config.
-- **Keep tracked benchmarks deterministic.** Serialize reproducible inputs,
-  objective values, and checks; keep wall-clock timing as a runtime-only
-  diagnostic.
-- **Run from the repo root.** Commands assume the template monorepo root
-  as working directory unless the child `AGENTS.md` states otherwise.
+- Domain core must not import `bond_api`/`bond_utilities` (layer contract).
+- Metrics are tokens — never hand-author numbers in prose.
+- Keep `Provenance.wall_time_s = 0.0`; persist with `bond_utilities.mission_io`.
+- Sonar params must avoid saturation (ranges/absorption tuned so the risk field
+  is not all ~1); see the absorption/threshold values in `manuscript/config.yaml`.
+- No literal `{{PLACEHOLDER}}` in numbered manuscript sections (cross-ref gate).
 
-## Cross-refs
-
-- Project contract: [`AGENTS.md`](../../../AGENTS.md)
-- README: [`README.md`](../../../README.md)
-- TODO: [`TODO.md`](../../../TODO.md)
-- Exemplar roster: [`projects/AGENTS.md`](../../../../../AGENTS.md)
+See the package `README.md`, `AGENTS.md`, and `docs/` for full details.

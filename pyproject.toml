@@ -1,4 +1,4 @@
-# Code Project Configuration
+# ELEKTRA Configuration — The World Is Not Enough (1999), BOND suite film package
 # Inherits workspace settings from root pyproject.toml
 
 [build-system]
@@ -7,9 +7,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "the_world_is_not_enough"
-version = "2.5.2"
+version = "0.1.0"
 license = {text = "MIT"}
-description = "Fully-tested codebase with numerical optimization and analysis"
+description = "ELEKTRA — Special-Agent Mission Software: oil-pipeline choke-point security, submarine evasion/detection, and hostage-psychology influence modeling"
 authors = [
     {name = "Daniel Ari Friedman", email = "daniel@activeinference.institute"}
 ]
@@ -18,18 +18,29 @@ dependencies = [
     "numpy>=1.24.0",
     "matplotlib>=3.7.0",
     "pyyaml>=6.0",
-    "defusedxml>=0.7.1",
+    "bond-api>=0.1.0",
+    "bond-utilities>=0.1.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    "ruff>=0.6.0",
+    "mypy>=1.10.0",
+    "types-PyYAML>=6.0",
 ]
+
+# Local path dependency on the FROZEN BOND-API protocol package (Layer 1) and
+# the Layer 0 foundation. Both live in the same local-only suite tree; there
+# is no remote for any of them.
+[tool.uv.sources]
+bond-api = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-api" }
+bond-utilities = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-utilities" }
 
 [tool.pytest.ini_options]
 # RASP Strict Assertion: Tests must be clearly separated and structurally identifiable
-pythonpath = [".", "src"]
+pythonpath = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
@@ -48,7 +59,7 @@ omit = [
 ]
 
 [tool.coverage.report]
-# ≥90% on src/ is the enforced gate; live coverage % is tracked in
+# >=90% on src/ is the enforced gate; live coverage % is tracked in
 # docs/_generated/COUNTS.md (do not hardcode it here — it drifts).
 fail_under = 90
 show_missing = true
@@ -58,6 +69,28 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "raise NotImplementedError",
 ]
+
+[tool.ruff]
+# Line length mirrors the template default (88). The monorepo root config does
+# not reach four levels deep, so the package carries its own lint settings.
+line-length = 88
+target-version = "py310"
+
+[tool.mypy]
+# Project-local mypy settings (the monorepo root config has no mypy_path for
+# this package's src/ layout). Mirrors the root gates: strict-ish typing,
+# explicit package bases, ignore missing stubs.
+python_version = "3.12"
+mypy_path = ["src"]
+explicit_package_bases = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+ignore_missing_imports = true
 
 [tool.uv]
 # Inherits workspace settings from root pyproject.toml

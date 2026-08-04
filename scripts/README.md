@@ -1,70 +1,25 @@
-# scripts/ - Analysis Scripts
+# scripts/ — the_world_is_not_enough (ELEKTRA)
 
-**Thin Orchestrators** demonstrating strict integration patterns. As per the Generalized Research Template policy, these scripts *do not contain core logic*. They only import from the `src/` directory and bridge results into the `infrastructure/` components for logging, rendering, and reporting.
+Thin per-mission-phase orchestrators. Business logic lives in `src/`; these
+scripts bootstrap `src/` onto `sys.path`, load the provider or call the
+figure/token generators, and print canonical output.
 
-## Quick Start
+| Script | Mission phase / action |
+| --- | --- |
+| `brief.py` | Print the frozen `MissionBrief` as BOND-API JSON |
+| `recon.py` | Run reconnaissance, print `ReconReport` JSON |
+| `plan.py` | Print the `MissionPlan` JSON |
+| `execute.py` | Execute the mission, print `MissionOutcome` JSON, persist provenance |
+| `debrief.py` | Print the `Debrief` (outcome + lessons) JSON |
+| `generate_figures.py` | Render the three deterministic concept figures |
+| `z_generate_manuscript_variables.py` | Hydrate manuscript `{{TOKEN}}`s (strict by default; `--allow-draft` relaxes) |
 
-```bash
-# Run analysis pipeline
-uv run python scripts/optimization_analysis.py
+## Conventions
 
-# View generated outputs
-ls -la ../output/
-```
-
-## Key Features
-
-- **analysis pipeline** (experiments + visualization)
-- **Automated figure generation** (convergence plots)
-- **Data export** (optimization results to CSV)
-- **Manuscript integration** (figure registration)
-
-## Common Commands
-
-### Run Analysis
-
-```bash
-uv run python optimization_analysis.py
-```
-
-Executes optimization experiments and generates all outputs.
-
-### Check Outputs
-
-```bash
-ls -la ../output/figures/
-ls -la ../output/data/
-```
-
-## Scripts
-
-| Script | Role | Pipeline |
-| --- | --- | --- |
-| `optimization_analysis.py` | Main analysis pipeline (experiments, figures, reports) | Required |
-| `build_dashboard.py` | Interactive HTML dashboard + invariants report | Required |
-| `04_benchmark_stage.py` | `infrastructure.benchmark` rubric demo | Optional |
-| `08_connector_search.py` | Connector search stage (opt-in `science`) | Optional |
-| `09_provenance_record.py` | Provenance DAG record (opt-in) | Optional |
-| `10_research_workflow.py` | Research workflow dispatch (opt-in) | Optional |
-| `z_generate_manuscript_variables.py` | Manuscript `{{TOKEN}}` hydration (runs last; `z_` prefix) | Required |
-| `generate_api_docs.py` | Writes `output/docs/api_reference.md` | AESTHETIC (smoke-tested) |
-| `00_preflight.py` | Puppeteer/mmdc pre-render warning | AESTHETIC (smoke-tested; exit 0 or 1) |
-
-Full API and smoke-test notes: [`AGENTS.md`](AGENTS.md).
-
-## Architecture
-
-```mermaid
-graph TD
-    OA[optimization_analysis.py] --> SA[src/analysis/]
-    BD[build_dashboard.py] --> SD[src/dashboard.py]
-    ZGEN[z_generate_manuscript_variables.py] --> MV[src/manuscript_variables.py]
-    SA --> OPT[src/optimizer.py]
-    SA --> FIG[src/figures/]
-    GD[generate_api_docs.py] --> DOC[src/documentation.py]
-    PF[00_preflight.py] --> INFRA[infrastructure.rendering.preflight]
-```
-
-## More Information
-
-See [AGENTS.md](AGENTS.md) for technical documentation.
+- Each script is runnable as `uv run python scripts/<name>.py` (it inserts
+  `src/` into `sys.path` itself).
+- Deterministic output; no wall-clock in the printed payloads (persisted
+  records use a fixed mission epoch).
+- Exit code `0` on success. `execute.py` writes
+  `output/data/elektra_mission.json` via
+  `bond_utilities.mission_io.record_provenance_outcome`.

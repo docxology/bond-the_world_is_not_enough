@@ -1,83 +1,88 @@
-# Methodology {#sec:methodology}
+# Methodology
 
-This section describes the implementation methodology, explicitly detailing how the optimization algorithms are constructed, validated, and analyzed using the Generalized Research Template's `infrastructure` and `tests` ecosystems.
+This section derives the mathematics of the three ELEKTRA pillar models. All
+algorithms are standard and deterministic; every quantity reported in §3 is
+computed by the corresponding code path.
 
-## Algorithm Implementation
+## 2.1 Oil-pipeline security: choke points and tamper
 
-### Gradient Descent Algorithm
+**Network.** A crude pipeline is a capacitated directed graph
+$G=(V,E)$ with origin $s$ (pump station), terminal $t$ (port), and segment
+capacities $c_e$ (kbbl/day). The canonical ELEKTRA dataset is a 17-node /
+16-edge simplex of the film's Caspian corridor: a twelve-segment mainline from
+`PUMP0` to `TERM` plus four spurs, with segment `J4->J5` deliberately
+under-capacity (the physical constriction the analysis must surface).
 
-The core algorithm implements the iterative procedure for unconstrained optimization. The [`optimizer` module](https://github.com/docxology/template/blob/main/projects/working/bond/the_world_is_not_enough/src/optimizer.py) uses the standard-library `logging` logger for optional verbose diagnostics; the [analysis orchestrator](https://github.com/docxology/template/blob/main/projects/working/bond/the_world_is_not_enough/scripts/optimization_analysis.py) uses `infrastructure.core.logging.utils.get_logger`. Tests run under the hermetic boundaries defined in the [test configuration](https://github.com/docxology/template/blob/main/projects/working/bond/the_world_is_not_enough/tests/conftest.py).
+**Maximum flow / minimum cut.** The Edmonds–Karp algorithm repeatedly finds a
+shortest (fewest-edge) augmenting path in the residual network and pushes its
+bottleneck capacity until no augmenting path remains [@edmonds_karp]. By the
+max-flow/min-cut theorem [@ford_fulkerson], the value of the maximum flow
+equals the capacity of the minimum $s$-$t$ cut — the segment set whose removal
+minimizes deliverable throughput. We recover that cut as the edges leaving the
+source-reachable set of the final residual network:
+$$v(f^*) = c(\delta(S^*)) = \min_{\text{cuts}} c(\delta(S)).$$
 
-**Algorithm — Gradient Descent (implemented in the [optimizer module](https://github.com/docxology/template/blob/main/projects/working/bond/the_world_is_not_enough/src/optimizer.py#L87-L173))**
+**Choke points.** A segment is a *choke point* when it is load-bearing and
+running at $\ge 90\%$ of its rated capacity: $u_e = f^*/c_e \ge 0.9$, where
+$f^*$ is the max-flow carried along the (unique) flow path. This isolates the
+constriction a cut or a tamper event can exploit with maximum throughput loss.
+We also report Brandes edge-betweenness centrality [@brandes], the fraction of
+all-pairs shortest paths traversing each segment, as a topological (rather than
+capacity) view of structural importance.
 
-> **Input:** Initial point $x_0$, step size $\alpha$, tolerance $\epsilon$, max iterations $N_{\max}$
->
-> 1. Initialize $k \leftarrow 0$
-> 2. **While** $k < N_{\max}$ **do:**
->    - Compute gradient $g_k = \nabla f(x_k)$
->    - **If** $\|g_k\|_2 < \epsilon$ **then return** $x_k$ *(converged)*
->    - Update: $x_{k+1} \leftarrow x_k - \alpha \cdot g_k$
->    - $k \leftarrow k + 1$
-> 3. **Return** $x_k$ *(max iterations reached)*
+**Tamper model.** A deterministic discrete-event simulation draws
+``{{CONFIG_TAMPER_EVENTS}}`` tamper attempts, each choosing a segment weighted
+by its declared risk; a guarded segment interdicts a detected attempt with
+per-sensor probability ``{{CONFIG_DETECTION_PROBABILITY}}``, and undetected
+events release the segment's capacity as lost flow (§3 reports the realized
+detection rate and the resulting flow loss). Sensor coverage is the fraction of
+total capacity under active sensors.
 
-## Infrastructure Integration
+## 2.2 Nuclear-submarine defense: sonar detection and evasion
 
-The methodology explicitly bridges theoretical mathematics with production-grade validation through the `infrastructure.scientific` module.
+**Passive sonar equation.** A listening sensor at range $r$ metres receives the
+target's radiated noise with a signal-to-noise ratio (dB)
+$$\mathrm{SNR} = SL - TL(r) - NL + DI, \quad TL(r)=20\log_{10}(r_{\mathrm{km}}) + \alpha\, r_{\mathrm{km}},$$
+with $SL$ the target source level, $NL$ ambient/self noise, $DI$ array
+directivity, and $\alpha$ the absorption coefficient (dB/km) [@urick]. The
+operator's detection probability follows the standard performance curve
+$$P_d = \Phi\!\left(\frac{\mathrm{SNR} - DT}{\sigma}\right),\quad
+\Phi(x)=\tfrac{1}{2}\bigl(1+\operatorname{erf}(x/\sqrt2)\bigr),$$
+where $DT$ is the detection threshold and $\sigma$ the operator variability.
 
-### Numerical Stability Analysis
+**Risk field.** Combining ${{CONFIG_SUB_SENSORS}}$ sensors by the independent
+rule $R = 1-\prod_i(1-P_{d,i})$ over a ${{CONFIG_SUB_GRID}}\times{{CONFIG_SUB_GRID}}$
+grid (3 km cells) yields the detection-probability field the submarine must
+minimize exposure over.
 
-Rather than writing ad-hoc validation code, the project imports `infrastructure.scientific.stability.check_numerical_stability`. This utility subjects the objective function to a barrage of extreme inputs (NaN, Inf, $\pm 10^{10}$) to calculate a formalized stability score. If this score degrades, the [analysis orchestrator](https://github.com/docxology/template/blob/main/scripts/pipeline/stage_02_analysis.py) execution deliberately aborts, ensuring the methodology cannot enter unrecoverable states.
+**Evasion routing.** Dijkstra's algorithm finds the least-cumulative-exposure
+path from origin to goal on the 4-connected grid, with per-step cost equal to
+the cell's detection risk [@dijkstra]. A greedy 4-connected monotone
+line-of-sight path serves as the naive baseline; because both live in the same
+search space, the routed exposure is guaranteed not to exceed the baseline.
+Bearing-only triangulation closes the loop: two passive bearings intersect
+(least-squares) to localize an emitter.
 
-### Performance Benchmarking
+## 2.3 Hostage psychology: Stockholm-syndrome dynamics
 
-The analysis exercises [`infrastructure.scientific.benchmarking.benchmark_function`](https://github.com/docxology/template/blob/main/infrastructure/scientific/benchmarking.py) as a runtime diagnostic. Host-dependent timing and memory observations are logged but excluded from tracked evidence. The canonical report records fixed inputs and exact objective values, while the dimensional figure reports deterministic convergence iterations and the proxy $d \times \text{iterations}$; neither surface claims that one host run proves an asymptotic bound.
+The influence model is a deterministic system of four bounded states — fear
+$F$, gratitude $G$, identification $I$, and a time-varying threat input
+$T(t)$ — each a fraction of 1:
 
-## Convergence Analysis
+$$\begin{aligned}
+\dot F &= -aF + b\,T(1-F),\\
+\dot G &= c\,K(t)(1-G) - d\,G,\\
+\dot I &= e\,G(1-I) - f\,F\,I,\\
+T(t) &= T_\text{floor} + T_0 e^{-\lambda t},
+\end{aligned}$$
 
-For quadratic functions $f(x) = \frac{1}{2}x^T A x - b^T x$ where $A$ is positive definite, the convergence factor becomes [@bertsekas1999nonlinear]:
-
-\begin{equation}
-\label{eq:convergence_factor}
-\rho = \frac{|\lambda_{\max} - \alpha\lambda_{\min}|}{|\lambda_{\min} + \alpha\lambda_{\max}|}
-\end{equation}
-
-Optimal convergence occurs when $\alpha = \frac{2}{\lambda_{\min} + \lambda_{\max}}$, yielding $\rho = \frac{\kappa - 1}{\kappa + 1}$.
-
-## Experimental Setup
-
-### Step Size Analysis
-
-Step sizes are not chosen ad hoc in the manuscript: they are read from `experiment.step_sizes` in `manuscript/config.yaml` and passed through `run_convergence_experiment()` in `src/analysis/` (entry: `scripts/optimization_analysis.py`). The active grid for this build is:
-
-{{CONFIG_STEP_SIZES_BULLETS}}
-
-Labels follow the same agency taxonomy used for plot colours (`_agency_category` in the analysis script): **conservative** (small $\alpha$, slow but stable on $H=I$), **near-optimal** (including $\alpha=1$ where the method reaches $x^\ast$ in one step for this quadratic), **aggressive** ($1 < \alpha < 2$, still linearly contracting in $|x-x^\ast|$ but oscillatory in sign), and **divergent** ($|1-\alpha| \geq 1$).
-
-### Zero-Mock Testing Methodology
-
-The most critical aspect of the project's methodology is its validation framework. The project is governed by a strict Zero-Mock testing policy, evaluated actively by executing `uv run pytest projects/working/bond/the_world_is_not_enough/tests/` during the infrastructure build phase.
-
-1. **Project tests**: [`projects/working/bond/the_world_is_not_enough/tests/test_optimizer.py`](../tests/test_optimizer.py) exercises `src/optimizer.py` (typical, edge, boundary, and pathological inputs including NaN/Inf and zero gradients) and, when infrastructure imports succeed, call into `optimization_analysis.py` helpers—without mocks. Suite size: [`docs/_generated/COUNTS.md`](../../../../docs/_generated/COUNTS.md).
-2. **Infrastructure validation**: The repository-level `tests/infra_tests/` suite validates shared template modules (e.g. pipeline and discovery helpers) independently of this project’s manuscript.
-3. **Coverage Gates**: The [GitHub Actions CI workflow](https://github.com/docxology/template/blob/main/.github/workflows/ci.yml) enforces a mandatory ≥90% statement coverage gate on `projects/working/bond/the_world_is_not_enough/src/` prior to treating the project as build-green.
-
-### Stopping rule and reporting
-
-`gradient_descent()` terminates when $\|\nabla f(x_k)\|$ falls below `experiment.tolerance`, when $k$ reaches `experiment.max_iterations`, or when an objective, gradient, or update becomes non-finite. The boolean `converged` plus `termination_reason` in exported CSV rows distinguish these outcomes. A non-finite candidate is rejected before it enters `objective_history`, preserving the last finite state for reproducible reporting. Downstream, `scripts/z_generate_manuscript_variables.py` aggregates the CSV into `RESULT_*` placeholders so tables and prose cannot drift from the last analysis run.
-
-### Figure generation contract
-
-Each figure in `03_results.md` maps to a generator in `src/figures/` (`generate_convergence_plot`, `generate_step_size_sensitivity_plot`, `generate_convergence_rate_plot`, `generate_complexity_visualization`, `generate_stability_visualization`, `generate_benchmark_visualization`), orchestrated by `src/analysis/` / `scripts/optimization_analysis.py`. Captions in the markdown intentionally name the function and the key parameters (tolerance lines, grids, dimensions) so reviewers can navigate from PDF to code without inferring hidden defaults.
-
-The same generator writes explicit `metadata.alt_text` for every registered
-figure. The alt text states what the visual encodes and preserves the boundary
-between deterministic observations and host-dependent diagnostics. Run the
-opt-in publication migration gate with
-`--require-figure-accessibility` to verify that every referenced figure has
-this metadata before promotion.
-
-## Analysis Pipeline & LaTeX Integration
-
-The automated analysis script leverages [`infrastructure.core.progress`](https://github.com/docxology/template/blob/main/infrastructure/core/progress.py) (`ProgressBar`, `SubStageProgress`) to orchestrate experiments, collect convergence trajectories, and generate publication-quality visualizations seamlessly.
-
-The research template supports advanced LaTeX customization through the `preamble.md` configuration. This is ingested directly by `infrastructure.rendering.latex_utils.py` and `pdf_renderer.py`, automatically linking compiled PGF plots and BibTeX citations. This automated approach ensures an unbreakable chain of custody from raw algorithmic execution to the final rendered manuscript.
+where $K(t)$ is a Gaussian-smoothed kindness-impulse train (the classic "small
+kindness" condition [@namnyak]) and the saturating $(1-\cdot)$ terms keep every
+state bounded in $[0,1]$. The composite **syndrome index**
+$S=\mathrm{clamp}\big((2I+G-F)/3\big)$ summarizes the state. Integration uses a
+fixed-step classical RK4 scheme over ${{CONFIG_HOSTAGE_DAYS}}$ days at
+$\Delta t = {{CONFIG_HOSTAGE_DT}}$, giving the onset day where $S$ first
+crosses the ${{CONFIG_HOSTAGE_ONSET}}$ threshold and the final/peak values.
+The model is phenomenological decision support, grounded in the qualitative
+conditions catalogued in the clinical and forensic literature
+[@namnyak; @de_fabrique].
