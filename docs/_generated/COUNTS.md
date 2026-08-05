@@ -6,8 +6,8 @@ and do not let prose elsewhere in the package restate one.
 
 | Metric | Value |
 | --- | --- |
-| Test count (pytest, 0 failed / 0 skipped) | 298 |
-| Line + branch coverage on `src/` | 99.35% (gate: ≥90%) |
+| Test count (pytest, 0 failed / 0 skipped) | 352 |
+| Line + branch coverage on `src/` | 99.38% (gate: ≥90%) |
 | Coverage gate | `uv run pytest tests/ --cov=src --cov-fail-under=90` |
 | Mocks | 0 (no `unittest.mock` / `MagicMock` / `mocker.patch` / `monkeypatch`) |
 | Domain modules (pure) | 6 (`pipeline_security`, `sub_defense`, `hostage_psychology`, `power_grid`, `negotiation_tactics`, `sensor_fusion`) |
@@ -17,7 +17,7 @@ and do not let prose elsewhere in the package restate one.
 | Mission result keys | 29 |
 | Debrief lessons (derived from the outcome) | 6 |
 | Registered gadgets | 8 |
-| Manuscript tokens generated | 60 (24 `CONFIG_*`, 29 `RESULT_*`, 7 identity/environment) |
+| Manuscript tokens generated | 76 (39 `CONFIG_*` — 30 declared in `config.yaml`, 9 derived from module datasets — plus 30 `RESULT_*` and 7 identity/environment) |
 | Manuscript sections | 9 (`00`–`07` plus `99_references`) |
 | Concept figures | 4 |
 | ruff / mypy | clean on `src/`, `scripts/`, `tests/` |

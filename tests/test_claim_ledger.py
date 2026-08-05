@@ -39,6 +39,22 @@ CLAIMS = _claims()
 CLAIM_IDS = [str(claim["id"]) for claim in CLAIMS]
 
 
+def stale_claims(claims: list[dict[str, Any]], variables: dict[str, str]) -> list[str]:
+    """Ids of ledger entries whose recorded value is not the live token value.
+
+    This is *the* gate: both the per-claim test and the falsifiability control
+    below route through it, so a control that passes while the comparison is
+    broken is impossible. An entry citing a token nobody generates is stale by
+    definition.
+    """
+    stale: list[str] = []
+    for claim in claims:
+        token = str(claim["evidence"])
+        if token not in variables or str(claim["value"]) != variables[token]:
+            stale.append(str(claim["id"]))
+    return stale
+
+
 class TestLedgerStructure:
     def test_ledger_is_not_empty(self) -> None:
         """A vacuous ledger would make every parametrized test below pass."""
@@ -69,9 +85,9 @@ class TestLedgerBindsToMeasuredOutput:
     def test_recorded_value_matches_the_live_token(self, claim: dict[str, Any]) -> None:
         variables = MV.generate_variables()
         token = str(claim["evidence"])
-        assert str(claim["value"]) == variables[token], (
+        assert not stale_claims([claim], variables), (
             f"{claim['id']} records {claim['value']!r} but {token} is "
-            f"{variables[token]!r} — regenerate the ledger from the models"
+            f"{variables.get(token)!r} — regenerate the ledger from the models"
         )
 
     @pytest.mark.parametrize("claim", CLAIMS, ids=CLAIM_IDS)
@@ -81,11 +97,49 @@ class TestLedgerBindsToMeasuredOutput:
 
 
 class TestLedgerCanFail:
-    """The binding above is a real gate, not a formality."""
+    """Mutation control on the gate itself, not on string inequality.
 
-    def test_a_corrupted_value_would_not_match(self) -> None:
+    The earlier version of this class asserted
+    ``str(claim['value']) + '9' != variables[token]`` — true for *any* string,
+    for any code, forever. It demonstrated nothing. These tests instead run
+    :func:`stale_claims` (the same function the suite above depends on) over a
+    corrupted copy of the real ledger and require it to flag the corruption,
+    with the uncorrupted ledger as the positive control. Break the comparison
+    inside ``stale_claims`` and this class goes red.
+    """
+
+    @staticmethod
+    def _corrupt(index: int, **overrides: Any) -> list[dict[str, Any]]:
+        claims = [dict(claim) for claim in CLAIMS]
+        claims[index].update(overrides)
+        return claims
+
+    def test_positive_control_the_real_ledger_is_clean(self) -> None:
+        assert stale_claims(CLAIMS, MV.generate_variables()) == []
+
+    @pytest.mark.parametrize("index", range(len(CLAIMS)))
+    def test_a_drifted_value_is_flagged(self, index: int) -> None:
+        """Perturbing any single recorded value must be caught, not just the first."""
         variables = MV.generate_variables()
-        claim = CLAIMS[0]
-        token = str(claim["evidence"])
-        corrupted = str(claim["value"]) + "9"
-        assert corrupted != variables[token]
+        original = str(CLAIMS[index]["value"])
+        drifted = f"{float(original) * 1.01:.3f}" if _is_number(original) else "XXX"
+        assert drifted != original
+        claims = self._corrupt(index, value=drifted)
+        assert stale_claims(claims, variables) == [CLAIM_IDS[index]]
+
+    def test_a_claim_citing_an_unknown_token_is_flagged(self) -> None:
+        claims = self._corrupt(0, evidence="RESULT_NO_SUCH_TOKEN")
+        assert stale_claims(claims, MV.generate_variables()) == [CLAIM_IDS[0]]
+
+    def test_the_gate_reports_every_drifted_entry_not_just_the_first(self) -> None:
+        variables = MV.generate_variables()
+        claims = [dict(claim) | {"value": "definitely-wrong"} for claim in CLAIMS]
+        assert stale_claims(claims, variables) == CLAIM_IDS
+
+
+def _is_number(text: str) -> bool:
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True

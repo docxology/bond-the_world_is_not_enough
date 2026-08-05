@@ -59,6 +59,30 @@ decoration that reads as safety. Two concrete cases in this package:
   `test_claim_ledger.py` now asserts each recorded value equals the live value
   of the token it cites — and asserts the ledger is non-empty first, so a
   deleted claims list cannot make the parametrized suite pass vacuously.
+  Its falsifiability control used to be
+  `assert str(claim['value']) + '9' != variables[token]`, which is true for
+  every string under every implementation and therefore demonstrated nothing.
+  It has been replaced: the comparison itself lives in `stale_claims()`, the
+  parametrized suite routes through it, and `TestLedgerCanFail` runs it over a
+  corrupted copy of the **real** ledger — once per claim, plus an
+  unknown-token case and an all-drifted case — with the uncorrupted ledger as
+  the positive control. Breaking `stale_claims` turns the class red.
+
+- `manuscript_variables._assert_units_consistent` is the unit gate added after
+  the tamper simulation reported a cumulative volume of 9660 under a
+  `kbbl/day` label — 23x the corridor's own max flow. It requires every
+  `RESULT_*` token to declare a unit in `RESULT_TOKEN_UNITS` and requires any
+  token declared a *rate* to sit below the physical ceiling of the system it
+  describes. Re-labelling the tamper volume `kbbl/day` makes hydration fail.
+
+- The manuscript's §5 "Source" column claims which rows come from
+  `config.yaml` and which are read off a fixed dataset. That is checked
+  against `DECLARED_CONFIG_TOKENS` / `DERIVED_DATASET_TOKENS` by parsing the
+  section, so a mislabelled row fails the suite. Naming a knob in a config
+  file is not evidence it is consumed, so each of the nine hostage rate
+  constants (plus the kindness schedule, the initial state, and the four
+  bargaining knobs) is *perturbed* in a temporary config and the reported
+  result is asserted to move.
 
 When a branch genuinely cannot be reached, the right answer is to delete it,
 not to write a test that pretends. That is why the "slack bus islanded" branch
@@ -111,8 +135,8 @@ real run rather than quoting a percentage in prose here.
 | `test_sensor_fusion.py` | track generation determinism, Kalman predict/update, RMSE and gain against the raw-measurement baseline, convergence |
 | `test_mission.py` | protocol conformance, all five stages, eight plan steps, provenance and `input_hash` determinism, gadget registration, discovery, serialization |
 | `test_figures.py` | deterministic generation of all four figures (headless `Agg`) |
-| `test_manuscript_variables.py` | config loading and validation, token hydration, derived-dataset tokens, the measurability gate, strict/non-strict tree resolution, and the live cross-reference that every `{{TOKEN}}` in a numbered section is generated |
-| `test_claim_ledger.py` | binds every entry of `data/claim_ledger.yaml` to the live value of the token it cites, plus a non-empty check so the parametrized suite cannot pass vacuously |
+| `test_manuscript_variables.py` | config loading and validation, token hydration, derived-dataset tokens, the measurability gate, the unit gate and rate ceilings, tamper-volume accounting, the leverage token's relative-vs-absolute reading, config-knob *consumption* for every hostage rate and bargaining knob, the §5 Source-column partition, example-config sync, the architecture-doc public-surface gate, strict/non-strict tree resolution, and the live cross-reference that every `{{TOKEN}}` in a numbered section is generated |
+| `test_claim_ledger.py` | binds every entry of `data/claim_ledger.yaml` to the live value of the token it cites, plus a non-empty check and a per-claim mutation control on the comparison function itself |
 | `test_scripts_smoke.py` | the phase CLIs and artifact scripts as real subprocesses |
 
 ## Deterministic-input guidance

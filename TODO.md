@@ -39,8 +39,16 @@ These are genuine follow-ups, each a scoped piece of work, not aspirations.
   available, replace the mapping and re-derive; until then it must stay
   labelled as an assumption in the scope section.
 - **Hostage-model parameters.** Calibrated by construction to reproduce onset
-  behaviour, not fitted to case data. Exposed in `manuscript/config.yaml` for
-  audit. Same rule: if it is ever fitted, the scope section changes with it.
+  behaviour, not fitted to case data. As of 2026-08-05 all nine ODE rate
+  constants, the initial state and the kindness schedule really are declared in
+  `manuscript/config.yaml` under `experiment.hostage` and consumed from there —
+  previously the §7 "exposed in `config.yaml` for audit" claim was false, since
+  the rates lived only in the `DynamicsParams` defaults. Each is now perturbed
+  in a test and the reported syndrome index asserted to move, so the exposure
+  is consumption, not naming. Same rule as before: if the rates are ever
+  *fitted*, the scope section changes with them. The *form* of the equations
+  remains hardcoded in `hostage_psychology.derivatives` and is not tunable —
+  §7 says so.
 
 ## Open — small, mechanical
 
@@ -48,10 +56,21 @@ These are genuine follow-ups, each a scoped piece of work, not aspirations.
   in `pipeline_security` (visited-node skips) and `power_grid` (empty-active
   break) are unexercised. They are cheap to cover; decide per branch whether
   the honest move is a test or a deletion.
-- **`_config_tokens` duplication.** The tokens mirroring `mission.py`'s module
-  constants are declared in two places (the config block and the adapter
-  constants). They are asserted equal by the manuscript tests, but a single
-  source would be better than a tested duplicate.
+- **`_config_tokens` duplication — now enforced, still a duplication.**
+  The experiment parameters are still declared in two places:
+  `manuscript/config.yaml` (read by `manuscript_variables`) and the
+  `_TAMPER_EVENTS` / `_DETECT_PROB` / `_SUB_*` / `_HOSTAGE_*` / `_GRID_*` /
+  `_NEGOTIATION` / `_FUSION` constants in `mission.py`. As of 2026-08-05 the
+  second half of the fix has landed:
+  `test_mission.py::TestExecute::test_every_mirrored_constant_equals_its_config_key`
+  binds every adapter constant to its config key, and
+  `test_mission_and_manuscript_measure_the_same_run` compares the measured
+  outputs. Confirmed failable — the `tamper_events: 41` /
+  `detection_probability: 0.55` edit that previously left the suite green now
+  turns it red. The remaining (optional) improvement is the *single-source*
+  version: have `mission.py` read the config block so there is nothing to
+  mirror. Until then `docs/architecture.md`'s "the mission and the manuscript
+  measure the same run" is a tested guarantee, not a single source of truth.
 
 ## Integration points (no action needed here)
 

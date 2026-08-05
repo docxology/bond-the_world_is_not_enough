@@ -36,7 +36,8 @@ hull.
 5. **Hostage negotiation** — Rubinstein alternating-offer bargaining ties the
    captor's patience to the syndrome state: identification lifts the captor's
    equilibrium claim to **{{RESULT_NEG_CAPTOR_SHARE}}** of the stake
-   (a **{{RESULT_NEG_CAPTOR_LEVERAGE}}**-boost over the no-syndrome baseline),
+   (up from a no-syndrome baseline of {{RESULT_NEG_BASELINE_SHARE}} — a
+   **{{RESULT_NEG_CAPTOR_LEVERAGE_PCT}}%** relative increase),
    and concession closes the deal by day **{{RESULT_NEG_SETTLEMENT_DAY}}**.
 6. **Sensor fusion** — a linear Kalman filter tracks the hijacked submarine
    from noisy position fixes, cutting position RMSE from

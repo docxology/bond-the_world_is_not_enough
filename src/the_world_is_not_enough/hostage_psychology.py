@@ -35,6 +35,8 @@ import math
 from dataclasses import dataclass, field
 
 __all__ = [
+    "DEFAULT_INITIAL_STATE",
+    "DEFAULT_KINDNESS_EVENTS",
     "DynamicsParams",
     "HostageDynamicsResult",
     "KindnessEvent",
@@ -82,6 +84,20 @@ class KindnessEvent:
             raise ValueError("KindnessEvent.day must be non-negative")
         if not 0.0 <= self.magnitude <= 1.0:
             raise ValueError("KindnessEvent.magnitude must be in [0, 1]")
+
+
+#: The canonical small-kindness impulse train. Mirrored (and overridable) in
+#: ``manuscript/config.yaml`` under ``experiment.hostage.kindness_events``.
+DEFAULT_KINDNESS_EVENTS: tuple[KindnessEvent, ...] = (
+    KindnessEvent(day=2.0, magnitude=0.7),
+    KindnessEvent(day=5.0, magnitude=0.6),
+    KindnessEvent(day=9.0, magnitude=0.5),
+    KindnessEvent(day=14.0, magnitude=0.4),
+)
+
+#: The canonical initial ``(fear, gratitude, identification)`` state. Mirrored
+#: in ``manuscript/config.yaml`` under ``experiment.hostage.initial_state``.
+DEFAULT_INITIAL_STATE: tuple[float, float, float] = (0.7, 0.0, 0.02)
 
 
 def threat_schedule(
@@ -211,13 +227,8 @@ def integrate_dynamics(
     days: float = 30.0,
     dt: float = 0.25,
     params: DynamicsParams | None = None,
-    events: tuple[KindnessEvent, ...] = (
-        KindnessEvent(day=2.0, magnitude=0.7),
-        KindnessEvent(day=5.0, magnitude=0.6),
-        KindnessEvent(day=9.0, magnitude=0.5),
-        KindnessEvent(day=14.0, magnitude=0.4),
-    ),
-    initial_state: tuple[float, float, float] = (0.7, 0.0, 0.02),
+    events: tuple[KindnessEvent, ...] = DEFAULT_KINDNESS_EVENTS,
+    initial_state: tuple[float, float, float] = DEFAULT_INITIAL_STATE,
     onset_threshold: float = 0.5,
 ) -> HostageDynamicsResult:
     """Integrate the ODE system from ``t=0`` to ``t=days`` with step ``dt``.

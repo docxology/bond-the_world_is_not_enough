@@ -118,6 +118,97 @@ class TestExecute:
         assert h1 == h2
         assert len(h1) == 64  # sha256 hex
 
+    def test_every_mirrored_constant_equals_its_config_key(self) -> None:
+        """Bind each `mission.py` constant to the config key it mirrors.
+
+        `docs/architecture.md` says the adapter constants mirror the
+        `experiment:` block "so the mission and the manuscript measure the same
+        run". Nothing enforced that: editing `config.yaml` to
+        `tamper_events: 41` left the whole suite green while the adapter still
+        ran 40. Every mirrored value is now pinned here, so the convention is a
+        checked guarantee rather than an unenforced comment.
+        """
+        from the_world_is_not_enough import manuscript_variables as MV
+
+        exp = MV.load_manuscript_config()["experiment"]
+        assert mission.SEED == exp["seed"]
+        assert mission._TAMPER_EVENTS == exp["pipeline"]["tamper_events"]
+        assert mission._DETECT_PROB == exp["pipeline"]["detection_probability"]
+
+        sub = exp["submarine"]
+        assert mission._SUB_GRID == sub["grid_size"]
+        assert mission._SUB_STEP_M == sub["step_m"]
+        assert list(mission._SUB_START) == sub["start"]
+        assert list(mission._SUB_GOAL) == sub["goal"]
+        assert len(mission._SUB_SENSORS) == len(sub["sensors"])
+        for sensor, declared in zip(mission._SUB_SENSORS, sub["sensors"], strict=True):
+            assert (sensor.x, sensor.y) == (declared["x"], declared["y"])
+            assert sensor.source_level == declared["source_level"]
+            assert sensor.noise_level == declared["noise_level"]
+            assert sensor.absorption_db_per_km == declared["absorption_db_per_km"]
+            assert sensor.detection_threshold_db == declared["detection_threshold_db"]
+
+        hostage = exp["hostage"]
+        assert mission._HOSTAGE_DAYS == hostage["days"]
+        assert mission._HOSTAGE_DT == hostage["dt"]
+        assert mission._HOSTAGE_ONSET == hostage["onset_threshold"]
+        # The rate block, kindness schedule and initial state the adapter runs
+        # must be the ones the manuscript declares (§5 Table 2).
+        assert mission._HOSTAGE_PARAMS == MV.hostage_params(hostage)
+        assert mission._HOSTAGE_EVENTS == MV.kindness_events(hostage)
+        assert mission._HOSTAGE_INITIAL == MV.hostage_initial_state(hostage)
+
+        assert mission._GRID_OUTAGE == exp["power_grid"]["initial_outage"]
+        assert mission._GRID_OVERLOAD_FACTOR == exp["power_grid"]["overload_factor"]
+
+        neg = exp["negotiation"]
+        assert mission._NEGOTIATION.deadline_days == neg["deadline_days"]
+        assert mission._NEGOTIATION.negotiator_discount == neg["negotiator_discount"]
+        assert mission._NEGOTIATION.concession_rate == neg["concession_rate"]
+        assert mission._NEGOTIATION.captor_discount_base == neg["captor_discount_base"]
+        assert mission._NEGOTIATION.captor_discount_gain == neg["captor_discount_gain"]
+        assert mission._NEGOTIATION.initial_demand == neg["initial_demand"]
+        assert mission._NEGOTIATION.initial_offer == neg["initial_offer"]
+
+        fusion = exp["fusion"]
+        assert mission._FUSION.dt == fusion["dt"]
+        assert mission._FUSION.steps == fusion["steps"]
+        assert mission._FUSION.process_noise == fusion["process_noise"]
+        assert mission._FUSION.measurement_noise == fusion["measurement_noise"]
+        assert mission._FUSION.seed == fusion["seed"]
+
+    def test_mission_and_manuscript_measure_the_same_run(self) -> None:
+        """The adapter mirrors `manuscript/config.yaml` — assert it, don't assume it.
+
+        `docs/architecture.md` claims mission and manuscript agree because
+        `mission.py`'s module constants mirror the `experiment:` block. Nothing
+        enforced that: the manuscript now reads its hostage rate constants and
+        bargaining schedule from the config file, so a config edit that the
+        adapter does not follow must fail here rather than silently publish two
+        different runs.
+        """
+        from the_world_is_not_enough import manuscript_variables as MV
+
+        provider = make_provider()
+        results = provider.execute(provider.plan(provider.brief())).results
+        variables = MV.generate_variables()
+        pairs = {
+            "max_flow_kbpd": "RESULT_MAX_FLOW",
+            "syndrome_final": "RESULT_SYNDROME_FINAL",
+            "syndrome_peak": "RESULT_SYNDROME_PEAK",
+            "syndrome_onset_day": "RESULT_SYNDROME_ONSET_DAY",
+            "influence_ratio": "RESULT_INFLUENCE_RATIO",
+            "neg_captor_share": "RESULT_NEG_CAPTOR_SHARE",
+            "blackout_lost_load_mw": "RESULT_BLACKOUT_LOST_MW",
+            "tamper_throughput_lost_kbbl": "RESULT_TAMPER_THROUGHPUT_LOST",
+        }
+        for key, token in pairs.items():
+            assert key in results, key
+            assert f"{float(results[key]):.3f}" == variables[token], (
+                f"mission {key}={results[key]} disagrees with manuscript "
+                f"{token}={variables[token]}"
+            )
+
     def test_measured_values(self) -> None:
         provider = make_provider()
         r = provider.execute(provider.plan(provider.brief())).results

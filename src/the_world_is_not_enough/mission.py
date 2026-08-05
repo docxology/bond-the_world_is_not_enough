@@ -108,6 +108,22 @@ _SUB_SENSORS: tuple[sub_defense.Sensor, ...] = (
 _HOSTAGE_DAYS = 30.0
 _HOSTAGE_DT = 0.25
 _HOSTAGE_ONSET = 0.5
+# The ODE rate block, kindness schedule and initial state. These mirror
+# `experiment.hostage` in manuscript/config.yaml; the mirroring is asserted by
+# tests/test_mission.py::TestExecute::test_every_mirrored_constant_equals_its_config_key.
+_HOSTAGE_PARAMS = hostage_psychology.DynamicsParams(
+    fear_decay=0.12,
+    threat_sensitivity=0.30,
+    kindness_gain=0.65,
+    gratitude_decay=0.05,
+    ident_gain=0.50,
+    fear_suppress=0.15,
+    threat_initial=0.75,
+    threat_decay=0.18,
+    threat_floor=0.12,
+)
+_HOSTAGE_EVENTS = hostage_psychology.DEFAULT_KINDNESS_EVENTS
+_HOSTAGE_INITIAL = hostage_psychology.DEFAULT_INITIAL_STATE
 
 _GRID = power_grid.default_power_grid()
 _GRID_OUTAGE = "3->5"
@@ -117,6 +133,10 @@ _NEGOTIATION = negotiation_tactics.NegotiationParams(
     deadline_days=10.0,
     negotiator_discount=0.90,
     concession_rate=0.08,
+    captor_discount_base=0.55,
+    captor_discount_gain=0.45,
+    initial_demand=0.95,
+    initial_offer=0.05,
 )
 
 _FUSION = sensor_fusion.TrackConfig(
@@ -253,6 +273,9 @@ def _run_steps() -> dict[str, Any]:
         days=_HOSTAGE_DAYS,
         dt=_HOSTAGE_DT,
         onset_threshold=_HOSTAGE_ONSET,
+        params=_HOSTAGE_PARAMS,
+        events=_HOSTAGE_EVENTS,
+        initial_state=_HOSTAGE_INITIAL,
     )
     # 6. power-grid cascading blackout
     blackout = power_grid.cascade_failure(
@@ -279,7 +302,9 @@ def _run_steps() -> dict[str, Any]:
         "sensor_coverage": float(analysis["sensor_coverage"]),
         "tamper_events": tamper["total_events"],
         "tamper_detection_rate": float(tamper["detection_rate"]),
-        "tamper_flow_lost_kbpd": float(tamper["flow_lost_kbpd"]),
+        # A cumulative *volume* (kbbl), not a per-day rate: see
+        # pipeline_security.simulate_tamper for the accounting convention.
+        "tamper_throughput_lost_kbbl": float(tamper["throughput_lost_kbbl"]),
         "naive_exposure": float(evasion["naive_exposure"]),
         "optimal_exposure": float(evasion["optimal_exposure"]),
         "exposure_reduction": float(evasion["exposure_reduction"]),

@@ -52,8 +52,12 @@ The Caspian crude corridor as a capacitated directed graph.
   rated capacity.
 - `simulate_tamper()` — a deterministic discrete-event simulation: attempts
   choose a segment weighted by declared risk (`random.Random(seed)`), guarded
-  segments interdict with a per-sensor probability, and undetected events
-  release capacity as lost flow.
+  segments interdict with a per-sensor probability, and undetected events are
+  charged their segment's rated capacity for `nominal_downtime_days`. The
+  reported `throughput_lost_kbbl` is therefore a cumulative **volume**, not a
+  per-day rate, and is not comparable against the max flow — it may exceed it.
+  It is also an upper bound: a segment is charged its full rating even where
+  the max-flow solution routes less through it.
 - `sensor_coverage()`, `normalize_risk_profile()`, `network_fingerprint()` —
   coverage fraction, risk prioritisation, and a stable topology hash.
 
@@ -70,11 +74,12 @@ The Caspian crude corridor as a capacitated directed graph.
   submarine must minimise exposure over. No random draws.
 - `dijkstra_evasion()` — least-cumulative-exposure path on the 4-connected
   lattice, with an insertion counter breaking cost ties deterministically.
-- `evasion_analysis()` — routed exposure against a monotone line-of-sight
-  baseline in the *same* search space, so the routed path is provably no
-  worse.
+- `straight_line_path()` — the monotone line-of-sight baseline route, and
+  `evasion_analysis()` — routed exposure against that baseline in the *same*
+  search space, so the routed path is provably no worse.
 - `triangulate_bearings()` — least-squares intersection of two passive
   bearings to localise an emitter.
+- `scenario_fingerprint()` — a stable hash of the sensor mosaic and grid.
 
 ### `hostage_psychology.py` — Stockholm-syndrome dynamics
 
@@ -82,11 +87,27 @@ A four-state bounded ODE system: fear `F`, gratitude `G`, identification `I`,
 and a decaying threat input `T(t)`, with a Gaussian-smoothed kindness impulse
 train driving gratitude.
 
+- `DynamicsParams` — the validated frozen dataclass holding the nine rate
+  constants (`fear_decay`, `threat_sensitivity`, `kindness_gain`,
+  `gratitude_decay`, `ident_gain`, `fear_suppress`, `threat_initial`,
+  `threat_decay`, `threat_floor`); every one is non-negative or construction
+  fails. These are the model's declared assumption, typed in
+  `manuscript/config.yaml` under `experiment.hostage.dynamics` and read by
+  `manuscript_variables.hostage_params()`.
+- `KindnessEvent` — a validated `(day, magnitude)` small-kindness act;
+  `DEFAULT_KINDNESS_EVENTS` and `DEFAULT_INITIAL_STATE` are the canonical
+  schedule and starting state, mirrored in the config file.
+- `threat_schedule()` — the decaying captivity-threat input
+  `floor + T0 * exp(-lambda t)`.
+- `derivatives()` — the ODE right-hand side `(dF/dt, dG/dt, dI/dt)`, and
+  `rk4_step()` — one classical fixed-step Runge–Kutta advance of it. The
+  *form* of these equations is fixed in code and is not configurable.
+- `syndrome_index()` — the composite `S = clamp((2I + G - F)/3)`.
 - `integrate_dynamics()` — fixed-step classical RK4 over the horizon. The
   saturating `(1 - x)` terms keep every state inside `[0, 1]`.
-- The composite syndrome index `S = clamp((2I + G - F)/3)` yields the reported
-  onset day (first crossing of the threshold), peak, final value, and
-  influence ratio.
+- `HostageDynamicsResult` — the full result: the four time series plus the
+  reported onset day (first crossing of the threshold), peak, peak day, final
+  value, and influence ratio, with `as_dict()` for the JSON summary.
 
 This module is phenomenological decision support, not a clinical instrument;
 `manuscript/07_scope_and_related_work.md` states that limit.
@@ -137,6 +158,8 @@ This module is phenomenological decision support, not a clinical instrument;
 - `KalmanFilter` — the constant-velocity linear filter: `predict()` propagates
   state and covariance, `update()` applies the gain
   `K = P H^T (H P H^T + R)^-1` and returns the innovation norm.
+- `FilterStep` — the per-step record (estimate, covariance trace, innovation)
+  the filter emits.
 - `track_rmse()`, `run_tracking()` — filter RMSE against the raw-measurement
   baseline, final position error, and the convergence flag.
 
@@ -184,7 +207,10 @@ Supporting pieces:
   than a tautology.
 - Module constants `_PIPELINE`, `_SUB_SENSORS`, `_GRID`, `_NEGOTIATION`,
   `_FUSION`, … mirror the `experiment:` block of `manuscript/config.yaml`, so
-  the mission and the manuscript measure the same run.
+  the mission and the manuscript measure the same run. The public identity
+  constants are `CODENAME`, `FILM`, `SEED` and `PACKAGE_VERSION`;
+  `tests/test_mission.py` asserts the mission's measured results equal the
+  manuscript's tokens, so the mirroring cannot drift silently.
 - `GADGETS: GadgetRegistry` — built at import by `_build_gadgets()` and
   registering eight callables under the film slug: `pipeline_analysis`,
   `tamper_simulation`, `evasion_analysis`, `hostage_dynamics`,
@@ -196,20 +222,38 @@ mission epoch, so no clock value ever reaches a result.
 
 ## Manuscript and figures
 
-`manuscript_variables.py` reads `manuscript/config.yaml` and *runs the domain
-models* to compute every `{{TOKEN}}`:
+`manuscript_variables.py` exposes `load_manuscript_config()` and
+`generate_variables()`, which reads `manuscript/config.yaml` and *runs the
+domain models* to compute every `{{TOKEN}}`:
 
-- `_config_tokens()` → the `CONFIG_*` family: declared parameters, plus
-  quantities derived from the fixed datasets (node and segment counts,
-  interconnector ratings, connected load) — derived, never typed.
+- `_declared_config_tokens()` → the `CONFIG_*` values **typed by the author**
+  in the config file; their names are pinned in `DECLARED_CONFIG_TOKENS`.
+- `_derived_dataset_tokens()` → the `CONFIG_*` values **read off the fixed
+  datasets** (`default_pipeline()`, `default_power_grid()`,
+  `CHOKE_UTILIZATION_THRESHOLD`) — derived, never typed, and unmovable from
+  the config file; pinned in `DERIVED_DATASET_TOKENS`. `_config_tokens()`
+  merges the two, and §5 of the manuscript labels each row with which it is.
+- `hostage_params()`, `kindness_events()`, `hostage_initial_state()` → build
+  the hostage model's whole parameter surface from
+  `experiment.hostage`, so the rate constants the manuscript declares as its
+  modelling assumption are genuinely config-driven rather than hardcoded.
 - `_run_domain_tokens()` → the `RESULT_*` family (measured outputs).
+- `RESULT_TOKEN_UNITS` → the declared physical unit of every result token, and
+  `_assert_units_consistent()` → the unit gate: an undeclared token, or a
+  token declared as a *rate* whose value exceeds the system's physical ceiling
+  (installed pipeline capacity for `kbbl/day`, connected load for `MW`), fails
+  hydration. This is what stops a cumulative volume being rendered as a
+  per-day rate.
 - `_assert_measurable()` → the strict gate: a blank or non-finite token fails
   hydration instead of rendering `nan` as a measured result.
 - `resolve_manuscript_tree()` → substitutes into `NN_*.md` and refuses, in
   strict mode, to write a section with a leftover `{{TOKEN}}`.
 
-`figures.py` renders four deterministic figures under headless `Agg`:
-`pipeline_network.png`, `submarine_detection.png`, `hostage_dynamics.png`,
+`figures.py` renders four deterministic figures under headless `Agg` via
+`generate_all_figures()`, which calls `figure_pipeline_network()`,
+`figure_submarine_detection()`, `figure_hostage_dynamics()` and
+`figure_sensor_fusion_track()` to write `pipeline_network.png`,
+`submarine_detection.png`, `hostage_dynamics.png` and
 `sensor_fusion_track.png`. No timestamps are drawn.
 
 ## Scripts

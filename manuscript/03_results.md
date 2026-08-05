@@ -23,9 +23,19 @@ Figure @fig:pipeline_network renders the graph with flow-criticality weighting
 and choke-point emphasis [@fig:pipeline_network].
 
 Over **{{RESULT_TAMPER_EVENTS}}** simulated tamper attempts, the sensor mosaic
-interdicted **{{RESULT_TAMPER_DETECTION_RATE}}%** of events, losing
-**{{RESULT_TAMPER_FLOW_LOST}} kbbl/day** to the undetected remainder; active
-sensors cover **{{RESULT_SENSOR_COVERAGE}}%** of installed capacity. Guarding
+interdicted **{{RESULT_TAMPER_DETECTION_RATE}}%** of events; active
+sensors cover **{{RESULT_SENSOR_COVERAGE}}%** of installed capacity. The
+undetected remainder is charged
+**{{RESULT_TAMPER_THROUGHPUT_LOST}} kbbl** of throughput — a *cumulative
+volume*, obtained by pricing each undetected event at its segment's rated
+capacity (kbbl/day) for {{RESULT_TAMPER_DOWNTIME_DAYS}} nominal downtime day.
+It is deliberately not comparable with the {{RESULT_MAX_FLOW}} kbbl/day max
+flow above and may exceed it, because many events accumulate across many
+downtime periods. Two limits of that accounting are worth stating plainly: it
+charges a segment's *full rating* rather than the flow the max-flow solution
+actually routes through it (so spur tampering is priced above its marginal
+delivery impact), and it therefore reports an upper bound on lost barrels
+rather than a delivered-volume shortfall. Guarding
 the single choke point {{RESULT_TOP_CHOKE_POINT}} protects the entire
 throughput ({{RESULT_MAX_FLOW}} kbbl/day), since it is the constriction every
 barrel must pass.
@@ -85,9 +95,10 @@ support base at once.
 The Stockholm-syndrome model's final state
 ($S$ = {{RESULT_SYNDROME_FINAL}}) feeds the bargaining layer: it lifts the
 captor's patience, raising the captor's equilibrium claim to
-**{{RESULT_NEG_CAPTOR_SHARE}}** of the pie — a **{{RESULT_NEG_CAPTOR_LEVERAGE}}**
-increase over the no-syndrome baseline of **{{RESULT_NEG_BASELINE_SHARE}}**
-(the equilibrium share at the captor's un-boosted patience). Under the
+**{{RESULT_NEG_CAPTOR_SHARE}}** of the pie, up from the no-syndrome baseline of
+**{{RESULT_NEG_BASELINE_SHARE}}** (the equilibrium share at the captor's
+un-boosted patience) — a *relative* increase of
+**{{RESULT_NEG_CAPTOR_LEVERAGE_PCT}}%**, not an added share of the pie. Under the
 symmetric concession schedule the captor and negotiator
 still close the deal at parity by day **{{RESULT_NEG_SETTLEMENT_DAY}}**
 (split **{{RESULT_NEG_SETTLEMENT_SPLIT}}**), but the syndrome has quietly

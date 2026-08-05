@@ -67,6 +67,27 @@ experiment:
     days: 30.0
     dt: 0.25
     onset_threshold: 0.5
+    # Initial (fear, gratitude, identification) state of the ODE system.
+    initial_state: [0.7, 0.0, 0.02]
+    # The nine ODE rate constants. These are the modelling assumption the
+    # manuscript declares (the clinical literature is qualitative); they live
+    # here so an auditor can change one and re-derive every reported number.
+    dynamics:
+      fear_decay: 0.12          # a      : fear self-decay
+      threat_sensitivity: 0.30  # b      : threat -> fear
+      kindness_gain: 0.65       # c      : kindness -> gratitude
+      gratitude_decay: 0.05     # d      : gratitude decay
+      ident_gain: 0.50          # e      : gratitude -> identification
+      fear_suppress: 0.15       # f      : fear suppresses identification
+      threat_initial: 0.75      # T0     : captivity threat at t=0
+      threat_decay: 0.18        # lambda : threat decay rate
+      threat_floor: 0.12        #          residual threat floor
+    # The "small kindness" impulse train driving gratitude.
+    kindness_events:
+      - {day: 2.0, magnitude: 0.7}
+      - {day: 5.0, magnitude: 0.6}
+      - {day: 9.0, magnitude: 0.5}
+      - {day: 14.0, magnitude: 0.4}
   power_grid:
     initial_outage: "3->5"
     overload_factor: 1.0
@@ -74,6 +95,12 @@ experiment:
     deadline_days: 10.0
     negotiator_discount: 0.90
     concession_rate: 0.08
+    # Syndrome -> captor patience map (d_c = base + gain * S) and the opening
+    # positions of the concession schedule.
+    captor_discount_base: 0.55
+    captor_discount_gain: 0.45
+    initial_demand: 0.95
+    initial_offer: 0.05
   fusion:
     dt: 1.0
     steps: 20

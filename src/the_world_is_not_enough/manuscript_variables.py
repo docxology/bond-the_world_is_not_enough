@@ -31,10 +31,109 @@ from the_world_is_not_enough import (
     sub_defense,
 )
 
-__all__ = ["generate_variables", "load_manuscript_config", "resolve_manuscript_tree"]
+__all__ = [
+    "DECLARED_CONFIG_TOKENS",
+    "DERIVED_DATASET_TOKENS",
+    "RESULT_TOKEN_UNITS",
+    "generate_variables",
+    "load_manuscript_config",
+    "resolve_manuscript_tree",
+]
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG_PATH = PACKAGE_ROOT / "manuscript" / "config.yaml"
+
+#: Physical unit of every ``RESULT_*`` token, declared once so prose, ledger
+#: and tests cannot disagree about what a number means. The distinction that
+#: matters is *rate* (``kbbl/day``, ``MW``) versus *volume* (``kbbl``): a rate
+#: is bounded by the corridor's installed capacity, a cumulative volume is not.
+#: ``""`` marks a dimensionless or categorical token.
+RESULT_TOKEN_UNITS: dict[str, str] = {
+    "RESULT_MAX_FLOW": "kbbl/day",
+    "RESULT_MIN_CUT_CAPACITY": "kbbl/day",
+    "RESULT_CHOKE_POINT_COUNT": "",
+    "RESULT_TOP_CHOKE_POINT": "",
+    "RESULT_SENSOR_COVERAGE": "percent",
+    "RESULT_TAMPER_EVENTS": "",
+    "RESULT_TAMPER_DETECTION_RATE": "percent",
+    "RESULT_TAMPER_THROUGHPUT_LOST": "kbbl",
+    "RESULT_TAMPER_DOWNTIME_DAYS": "days",
+    "RESULT_SUB_SENSORS": "",
+    "RESULT_NAIVE_EXPOSURE": "",
+    "RESULT_OPTIMAL_EXPOSURE": "",
+    "RESULT_EXPOSURE_REDUCTION": "percent",
+    "RESULT_SYNDROME_FINAL": "",
+    "RESULT_SYNDROME_PEAK": "",
+    "RESULT_SYNDROME_ONSET_DAY": "days",
+    "RESULT_INFLUENCE_RATIO": "",
+    "RESULT_BLACKOUT_STEPS": "",
+    "RESULT_BLACKOUT_LINES_TRIPPED": "",
+    "RESULT_BLACKOUT_LOST_MW": "MW",
+    "RESULT_BLACKOUT_FRACTION": "",
+    "RESULT_NEG_SETTLEMENT_DAY": "days",
+    "RESULT_NEG_SETTLEMENT_SPLIT": "",
+    "RESULT_NEG_CAPTOR_SHARE": "",
+    "RESULT_NEG_BASELINE_SHARE": "",
+    "RESULT_NEG_CAPTOR_LEVERAGE_PCT": "percent",
+    "RESULT_TRACK_RMSE": "",
+    "RESULT_TRACK_MEASUREMENT_RMSE": "",
+    "RESULT_TRACK_FINAL_ERROR": "",
+    "RESULT_TRACK_GAIN": "percent",
+}
+
+#: ``CONFIG_*`` tokens whose value is *typed by the author* in
+#: ``manuscript/config.yaml``. Editing the file changes them.
+DECLARED_CONFIG_TOKENS: frozenset[str] = frozenset(
+    {
+        "CONFIG_SEED",
+        "CONFIG_TAMPER_EVENTS",
+        "CONFIG_DETECTION_PROBABILITY",
+        "CONFIG_SUB_GRID",
+        "CONFIG_SUB_STEP_KM",
+        "CONFIG_SUB_SENSORS",
+        "CONFIG_HOSTAGE_DAYS",
+        "CONFIG_HOSTAGE_DT",
+        "CONFIG_HOSTAGE_ONSET",
+        "CONFIG_HOSTAGE_INITIAL_STATE",
+        "CONFIG_HOSTAGE_FEAR_DECAY",
+        "CONFIG_HOSTAGE_THREAT_SENSITIVITY",
+        "CONFIG_HOSTAGE_KINDNESS_GAIN",
+        "CONFIG_HOSTAGE_GRATITUDE_DECAY",
+        "CONFIG_HOSTAGE_IDENT_GAIN",
+        "CONFIG_HOSTAGE_FEAR_SUPPRESS",
+        "CONFIG_HOSTAGE_THREAT_INITIAL",
+        "CONFIG_HOSTAGE_THREAT_DECAY",
+        "CONFIG_HOSTAGE_THREAT_FLOOR",
+        "CONFIG_HOSTAGE_KINDNESS_SCHEDULE",
+        "CONFIG_GRID_INITIAL_OUTAGE",
+        "CONFIG_NEG_DEADLINE_DAYS",
+        "CONFIG_NEG_NEGOTIATOR_DISCOUNT",
+        "CONFIG_NEG_CONCESSION_RATE",
+        "CONFIG_NEG_CAPTOR_DISCOUNT_BASE",
+        "CONFIG_NEG_CAPTOR_DISCOUNT_GAIN",
+        "CONFIG_NEG_INITIAL_DEMAND",
+        "CONFIG_NEG_INITIAL_OFFER",
+        "CONFIG_FUSION_STEPS",
+        "CONFIG_FUSION_MEASUREMENT_NOISE",
+    }
+)
+
+#: ``CONFIG_*`` tokens *derived from a fixed dataset or module constant*.
+#: Editing ``manuscript/config.yaml`` cannot change them; changing the module
+#: dataset can. The manuscript must label these as derived, never as tunable.
+DERIVED_DATASET_TOKENS: frozenset[str] = frozenset(
+    {
+        "CONFIG_PIPELINE_NODES",
+        "CONFIG_PIPELINE_SEGMENTS",
+        "CONFIG_CHOKE_UTILIZATION",
+        "CONFIG_GRID_BUSES",
+        "CONFIG_GRID_LINES",
+        "CONFIG_GRID_LOAD_MW",
+        "CONFIG_GRID_STRONG_TIE_MW",
+        "CONFIG_GRID_WEAK_TIE",
+        "CONFIG_GRID_WEAK_TIE_MW",
+    }
+)
 
 MISSION_CODENAME = "ELEKTRA"
 MISSION_FILM = "The World Is Not Enough (1999)"
@@ -59,6 +158,66 @@ def load_manuscript_config(config_path: str | Path | None = None) -> dict[str, A
 
 def _fmt(value: float, precision: int = 3) -> str:
     return f"{value:.{precision}f}"
+
+
+def hostage_params(hostage_cfg: dict[str, Any]) -> hostage_psychology.DynamicsParams:
+    """Build the ODE rate block from ``experiment.hostage.dynamics``.
+
+    Every rate constant of the hostage model is declared in
+    ``manuscript/config.yaml``; the dataclass defaults are the fallback for a
+    config that omits the block, not the authority.
+    """
+    rates = hostage_cfg.get("dynamics", {}) or {}
+    if not isinstance(rates, dict):
+        raise TypeError("experiment.hostage.dynamics must be a mapping")
+    default = hostage_psychology.DynamicsParams()
+    return hostage_psychology.DynamicsParams(
+        **{
+            name: float(rates.get(name, getattr(default, name)))
+            for name in (
+                "fear_decay",
+                "threat_sensitivity",
+                "kindness_gain",
+                "gratitude_decay",
+                "ident_gain",
+                "fear_suppress",
+                "threat_initial",
+                "threat_decay",
+                "threat_floor",
+            )
+        }
+    )
+
+
+def kindness_events(
+    hostage_cfg: dict[str, Any],
+) -> tuple[hostage_psychology.KindnessEvent, ...]:
+    """Build the small-kindness impulse train from ``experiment.hostage``."""
+    raw = hostage_cfg.get("kindness_events")
+    if raw is None:
+        return hostage_psychology.DEFAULT_KINDNESS_EVENTS
+    if not isinstance(raw, list):
+        raise TypeError("experiment.hostage.kindness_events must be a list")
+    return tuple(
+        hostage_psychology.KindnessEvent(
+            day=float(item["day"]), magnitude=float(item["magnitude"])
+        )
+        for item in raw
+    )
+
+
+def hostage_initial_state(
+    hostage_cfg: dict[str, Any],
+) -> tuple[float, float, float]:
+    """Read the initial ``(fear, gratitude, identification)`` state."""
+    raw = hostage_cfg.get("initial_state")
+    if raw is None:
+        return hostage_psychology.DEFAULT_INITIAL_STATE
+    if not isinstance(raw, list) or len(raw) != 3:
+        raise TypeError(
+            "experiment.hostage.initial_state must be a list of three fractions"
+        )
+    return (float(raw[0]), float(raw[1]), float(raw[2]))
 
 
 def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
@@ -117,6 +276,9 @@ def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
         days=float(hostage_cfg.get("days", 30.0)),
         dt=float(hostage_cfg.get("dt", 0.25)),
         onset_threshold=float(hostage_cfg.get("onset_threshold", 0.5)),
+        params=hostage_params(hostage_cfg),
+        events=kindness_events(hostage_cfg),
+        initial_state=hostage_initial_state(hostage_cfg),
     )
 
     # --- power-grid pillar (cascading blackout) ---
@@ -132,6 +294,10 @@ def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
         deadline_days=float(neg_cfg.get("deadline_days", 10.0)),
         negotiator_discount=float(neg_cfg.get("negotiator_discount", 0.90)),
         concession_rate=float(neg_cfg.get("concession_rate", 0.08)),
+        captor_discount_base=float(neg_cfg.get("captor_discount_base", 0.55)),
+        captor_discount_gain=float(neg_cfg.get("captor_discount_gain", 0.45)),
+        initial_demand=float(neg_cfg.get("initial_demand", 0.95)),
+        initial_offer=float(neg_cfg.get("initial_offer", 0.05)),
     )
     settlement = cast(
         "dict[str, Any]",
@@ -143,6 +309,9 @@ def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
         negotiation.captor_discount_base, negotiation.negotiator_discount
     )[0]
     captor_share = float(settlement["captor_share"])
+    # *Relative* increase over the no-syndrome baseline, reported as a percent
+    # (like its sibling relative tokens RESULT_EXPOSURE_REDUCTION and
+    # RESULT_TRACK_GAIN) so it can never be misread as an absolute pie share.
     leverage = (captor_share - baseline) / baseline if baseline > 0 else 0.0
 
     # --- sensor-fusion pillar (Kalman track of the hijacked submarine) ---
@@ -165,7 +334,8 @@ def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
         "RESULT_SENSOR_COVERAGE": _fmt(float(analysis["sensor_coverage"]) * 100.0),
         "RESULT_TAMPER_EVENTS": str(int(tamper["total_events"])),
         "RESULT_TAMPER_DETECTION_RATE": _fmt(float(tamper["detection_rate"]) * 100.0),
-        "RESULT_TAMPER_FLOW_LOST": _fmt(float(tamper["flow_lost_kbpd"])),
+        "RESULT_TAMPER_THROUGHPUT_LOST": _fmt(float(tamper["throughput_lost_kbbl"])),
+        "RESULT_TAMPER_DOWNTIME_DAYS": _fmt(float(tamper["nominal_downtime_days"]), 1),
         "RESULT_SUB_SENSORS": str(sensor_count),
         "RESULT_NAIVE_EXPOSURE": _fmt(float(evasion["naive_exposure"])),
         "RESULT_OPTIMAL_EXPOSURE": _fmt(float(evasion["optimal_exposure"])),
@@ -194,7 +364,7 @@ def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
         ),
         "RESULT_NEG_CAPTOR_SHARE": _fmt(captor_share),
         "RESULT_NEG_BASELINE_SHARE": _fmt(baseline),
-        "RESULT_NEG_CAPTOR_LEVERAGE": _fmt(leverage),
+        "RESULT_NEG_CAPTOR_LEVERAGE_PCT": _fmt(leverage * 100.0),
         "RESULT_TRACK_RMSE": _fmt(float(fusion["filter_rmse"])),
         "RESULT_TRACK_MEASUREMENT_RMSE": _fmt(float(fusion["measurement_rmse"])),
         "RESULT_TRACK_FINAL_ERROR": _fmt(float(fusion["final_position_error"])),
@@ -239,6 +409,46 @@ def _assert_measurable(result_tokens: dict[str, str]) -> None:
             )
 
 
+def _assert_units_consistent(result_tokens: dict[str, str]) -> None:
+    """Reject a ``RESULT_*`` token whose value contradicts its declared unit.
+
+    Two checks, both able to fail on real model output:
+
+    1. Every result token must declare a unit in :data:`RESULT_TOKEN_UNITS`, so
+       a new number cannot enter the manuscript unlabelled.
+    2. A token declared as a **rate** must respect the physical ceiling of the
+       system it describes — installed pipeline capacity for ``kbbl/day``,
+       connected load for ``MW``. This is the gate that catches a cumulative
+       *volume* being rendered as a per-day rate.
+
+    Raises:
+        ValueError: on an undeclared unit or a rate above its physical ceiling.
+    """
+    undeclared = sorted(set(result_tokens) - set(RESULT_TOKEN_UNITS))
+    if undeclared:
+        raise ValueError(
+            f"result tokens without a declared unit in RESULT_TOKEN_UNITS: {undeclared}"
+        )
+    ceilings = {
+        "kbbl/day": sum(e.capacity for e in pipeline_security.default_pipeline().edges),
+        "MW": power_grid.total_load(power_grid.default_power_grid()),
+    }
+    for name, value in sorted(result_tokens.items()):
+        ceiling = ceilings.get(RESULT_TOKEN_UNITS[name])
+        if ceiling is None:
+            continue
+        try:
+            numeric = float(value)
+        except ValueError:
+            continue
+        if numeric > ceiling:
+            raise ValueError(
+                f"manuscript token {name} is declared "
+                f"{RESULT_TOKEN_UNITS[name]!r} but its value {value} exceeds the "
+                f"physical ceiling {ceiling:g} — it is not a rate"
+            )
+
+
 def generate_variables(
     *,
     config_path: str | Path | None = None,
@@ -263,6 +473,7 @@ def generate_variables(
     result_tokens = _run_domain_tokens(config)
     if require_outputs:
         _assert_measurable(result_tokens)
+    _assert_units_consistent(result_tokens)
 
     timestamp = (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
     return {
@@ -279,7 +490,18 @@ def generate_variables(
 
 
 def _config_tokens(config: dict[str, Any]) -> dict[str, str]:
-    """Format the deterministic experiment parameters as ``CONFIG_*`` tokens."""
+    """All ``CONFIG_*`` tokens: the declared block plus the derived block.
+
+    The two halves are kept apart deliberately — see
+    :data:`DECLARED_CONFIG_TOKENS` and :data:`DERIVED_DATASET_TOKENS`. Only the
+    first responds to edits of ``manuscript/config.yaml``; conflating them is
+    what made §5 of the manuscript overclaim its tunable surface.
+    """
+    return {**_declared_config_tokens(config), **_derived_dataset_tokens(config)}
+
+
+def _declared_config_tokens(config: dict[str, Any]) -> dict[str, str]:
+    """``CONFIG_*`` tokens typed by the author in ``manuscript/config.yaml``."""
     experiment = config.get("experiment", {}) or {}
     if not isinstance(experiment, dict):
         raise TypeError("manuscript config 'experiment' section must be a mapping")
@@ -290,10 +512,80 @@ def _config_tokens(config: dict[str, Any]) -> dict[str, str]:
     negotiation = experiment.get("negotiation", {}) or {}
     fusion = experiment.get("fusion", {}) or {}
     sensors = submarine.get("sensors", []) or []
+    rates = hostage_params(hostage)
+    events = kindness_events(hostage)
+    initial = hostage_initial_state(hostage)
+    tokens = {
+        "CONFIG_SEED": str(experiment.get("seed", 1999)),
+        "CONFIG_TAMPER_EVENTS": str(int(pipeline.get("tamper_events", 40))),
+        "CONFIG_DETECTION_PROBABILITY": _fmt(
+            float(pipeline.get("detection_probability", 0.85))
+        ),
+        "CONFIG_SUB_GRID": str(int(submarine.get("grid_size", 16))),
+        "CONFIG_SUB_STEP_KM": _fmt(float(submarine.get("step_m", 3000.0)) / 1000.0, 0),
+        "CONFIG_SUB_SENSORS": str(len(sensors)),
+        "CONFIG_HOSTAGE_DAYS": _fmt(float(hostage.get("days", 30.0)), 1),
+        "CONFIG_HOSTAGE_DT": _fmt(float(hostage.get("dt", 0.25))),
+        "CONFIG_HOSTAGE_ONSET": _fmt(float(hostage.get("onset_threshold", 0.5))),
+        "CONFIG_HOSTAGE_INITIAL_STATE": ", ".join(_fmt(v, 2) for v in initial),
+        "CONFIG_HOSTAGE_FEAR_DECAY": _fmt(rates.fear_decay),
+        "CONFIG_HOSTAGE_THREAT_SENSITIVITY": _fmt(rates.threat_sensitivity),
+        "CONFIG_HOSTAGE_KINDNESS_GAIN": _fmt(rates.kindness_gain),
+        "CONFIG_HOSTAGE_GRATITUDE_DECAY": _fmt(rates.gratitude_decay),
+        "CONFIG_HOSTAGE_IDENT_GAIN": _fmt(rates.ident_gain),
+        "CONFIG_HOSTAGE_FEAR_SUPPRESS": _fmt(rates.fear_suppress),
+        "CONFIG_HOSTAGE_THREAT_INITIAL": _fmt(rates.threat_initial),
+        "CONFIG_HOSTAGE_THREAT_DECAY": _fmt(rates.threat_decay),
+        "CONFIG_HOSTAGE_THREAT_FLOOR": _fmt(rates.threat_floor),
+        "CONFIG_HOSTAGE_KINDNESS_SCHEDULE": "; ".join(
+            f"day {_fmt(ev.day, 1)} x {_fmt(ev.magnitude, 2)}" for ev in events
+        ),
+        "CONFIG_GRID_INITIAL_OUTAGE": str(power.get("initial_outage", "3->5")),
+        "CONFIG_NEG_DEADLINE_DAYS": _fmt(
+            float(negotiation.get("deadline_days", 10.0)), 1
+        ),
+        "CONFIG_NEG_NEGOTIATOR_DISCOUNT": _fmt(
+            float(negotiation.get("negotiator_discount", 0.90))
+        ),
+        "CONFIG_NEG_CONCESSION_RATE": _fmt(
+            float(negotiation.get("concession_rate", 0.08))
+        ),
+        "CONFIG_NEG_CAPTOR_DISCOUNT_BASE": _fmt(
+            float(negotiation.get("captor_discount_base", 0.55))
+        ),
+        "CONFIG_NEG_CAPTOR_DISCOUNT_GAIN": _fmt(
+            float(negotiation.get("captor_discount_gain", 0.45))
+        ),
+        "CONFIG_NEG_INITIAL_DEMAND": _fmt(
+            float(negotiation.get("initial_demand", 0.95))
+        ),
+        "CONFIG_NEG_INITIAL_OFFER": _fmt(float(negotiation.get("initial_offer", 0.05))),
+        "CONFIG_FUSION_STEPS": str(int(fusion.get("steps", 20))),
+        "CONFIG_FUSION_MEASUREMENT_NOISE": _fmt(
+            float(fusion.get("measurement_noise", 2.0))
+        ),
+    }
+    # The frozen name set is asserted against this dict in
+    # tests/test_manuscript_variables.py rather than re-checked here: an
+    # in-code guard on a mismatch no input can produce would be unreachable.
+    return tokens
+
+
+def _derived_dataset_tokens(config: dict[str, Any]) -> dict[str, str]:
+    """``CONFIG_*`` tokens derived from fixed datasets and module constants.
+
+    These are *not* tunable from ``manuscript/config.yaml``: they are read off
+    ``default_pipeline()``, ``default_power_grid()`` and
+    ``CHOKE_UTILIZATION_THRESHOLD``. The config only selects *which* dataset
+    element to report (the initial outage), never its value.
+    """
+    # `_config_tokens` runs `_declared_config_tokens` first, which rejects a
+    # non-mapping `experiment:` section, so no duplicate guard is needed here.
+    experiment = config.get("experiment", {}) or {}
+    power = experiment.get("power_grid", {}) or {}
     network = pipeline_security.default_pipeline()
     grid = power_grid.default_power_grid()
-    outage_id = str(power.get("initial_outage", "3->5"))
-    strong_tie = grid.line_id(outage_id)
+    strong_tie = grid.line_id(str(power.get("initial_outage", "3->5")))
     # The "weak tie" is the other interconnector into the strong tie's load-area
     # bus: same target bus, lower rating. Derived from the dataset, never typed.
     weak_ties = sorted(
@@ -305,44 +597,20 @@ def _config_tokens(config: dict[str, Any]) -> dict[str, str]:
         key=lambda line: line.capacity_mw,
     )
     weak_tie = weak_ties[0] if weak_ties else strong_tie
-    return {
-        "CONFIG_SEED": str(experiment.get("seed", 1999)),
+    tokens = {
         "CONFIG_PIPELINE_NODES": str(network.node_count()),
         "CONFIG_PIPELINE_SEGMENTS": str(network.edge_count),
         "CONFIG_CHOKE_UTILIZATION": _fmt(
             pipeline_security.CHOKE_UTILIZATION_THRESHOLD * 100.0, 0
         ),
-        "CONFIG_TAMPER_EVENTS": str(int(pipeline.get("tamper_events", 40))),
-        "CONFIG_DETECTION_PROBABILITY": _fmt(
-            float(pipeline.get("detection_probability", 0.85))
-        ),
-        "CONFIG_SUB_GRID": str(int(submarine.get("grid_size", 16))),
-        "CONFIG_SUB_STEP_KM": _fmt(float(submarine.get("step_m", 3000.0)) / 1000.0, 0),
-        "CONFIG_SUB_SENSORS": str(len(sensors)),
-        "CONFIG_HOSTAGE_DAYS": _fmt(float(hostage.get("days", 30.0)), 1),
-        "CONFIG_HOSTAGE_DT": _fmt(float(hostage.get("dt", 0.25))),
-        "CONFIG_HOSTAGE_ONSET": _fmt(float(hostage.get("onset_threshold", 0.5))),
         "CONFIG_GRID_BUSES": str(grid.n_buses),
         "CONFIG_GRID_LINES": str(len(grid.lines)),
         "CONFIG_GRID_LOAD_MW": _fmt(power_grid.total_load(grid), 0),
-        "CONFIG_GRID_INITIAL_OUTAGE": outage_id,
         "CONFIG_GRID_STRONG_TIE_MW": _fmt(strong_tie.capacity_mw, 0),
         "CONFIG_GRID_WEAK_TIE": weak_tie.id,
         "CONFIG_GRID_WEAK_TIE_MW": _fmt(weak_tie.capacity_mw, 0),
-        "CONFIG_NEG_DEADLINE_DAYS": _fmt(
-            float(negotiation.get("deadline_days", 10.0)), 1
-        ),
-        "CONFIG_NEG_NEGOTIATOR_DISCOUNT": _fmt(
-            float(negotiation.get("negotiator_discount", 0.90))
-        ),
-        "CONFIG_NEG_CONCESSION_RATE": _fmt(
-            float(negotiation.get("concession_rate", 0.08))
-        ),
-        "CONFIG_FUSION_STEPS": str(int(fusion.get("steps", 20))),
-        "CONFIG_FUSION_MEASUREMENT_NOISE": _fmt(
-            float(fusion.get("measurement_noise", 2.0))
-        ),
     }
+    return tokens
 
 
 def resolve_manuscript_tree(

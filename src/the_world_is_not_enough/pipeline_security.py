@@ -11,9 +11,12 @@ capacitated flow network. Two families of real algorithms operate on it:
 
 * **Tamper modeling** — a deterministic discrete-event simulation places
   tamper attempts on segments (weighted by declared risk), resolves sensor
-  detection (guarded vs. unguarded), and accounts the flow lost to
+  detection (guarded vs. unguarded), and accounts the throughput lost to
   undetected events, so guarding effort can be allocated to the choke points
-  that matter.
+  that matter. The loss it accounts is a **volume** (kbbl), not a rate: each
+  undetected event is charged its segment's rated capacity (kbbl/day) for one
+  nominal downtime period (days). Summing it across events therefore has no
+  per-day interpretation and is not comparable to the corridor's max flow.
 
 Everything is deterministic: the network topology is a fixed dataset declared
 in this module (reflecting the film's Caspian corridor, abstracted to sealed
@@ -444,42 +447,58 @@ def simulate_tamper(
     n_events: int,
     seed: int,
     detection_probability: float = 0.85,
+    nominal_downtime_days: float = 1.0,
 ) -> dict[str, object]:
     """Deterministic tamper-event simulation over the pipeline.
 
     Each of ``n_events`` tamper attempts picks a segment weighted by its
     declared ``tamper_risk``; a guarded segment detects the attempt with
     probability ``detection_probability``, and a detected event is interdicted
-    (no flow lost). Undetected events release the segment's capacity as lost
-    flow for one nominal downtime period. Reproducible for a fixed ``seed``.
+    (no throughput lost). Reproducible for a fixed ``seed``.
+
+    **Units.** An undetected event is charged its segment's rated capacity
+    (kbbl/day) for ``nominal_downtime_days`` days, so the accounted loss is a
+    **volume in kbbl** — reported as ``throughput_lost_kbbl`` — and the sum
+    across events is a cumulative volume with no per-day meaning. It is
+    deliberately *not* comparable against the corridor max flow (a rate), and
+    it may legitimately exceed it: many events over many downtime periods
+    accumulate more barrels than the line moves in a single day.
+
+    The accounting is also an **upper bound**, not carried flow: a segment is
+    charged its full rating even when the max-flow solution routes less (or
+    zero) through it, so spur tampering is priced at spur capacity rather than
+    at its marginal delivery impact.
     """
     if n_events < 0:
         raise ValueError("n_events must be non-negative")
     if not 0.0 <= detection_probability <= 1.0:
         raise ValueError("detection_probability must be in [0, 1]")
+    if nominal_downtime_days <= 0:
+        raise ValueError("nominal_downtime_days must be positive")
     rng = random.Random(seed)
     weights = [e.tamper_risk for e in network.edges]
     if not network.edges or sum(weights) <= 0:
         raise ValueError("cannot simulate tamper on a network with no risky edges")
 
     events: list[dict[str, object]] = []
-    lost_flow = 0.0
+    lost_volume = 0.0
     target_counts: dict[str, int] = {}
     detected = 0
     for _ in range(n_events):
         edge = rng.choices(network.edges, weights=weights, k=1)[0]
         is_detected = edge.sensor and rng.random() < detection_probability
+        event_loss = 0.0 if is_detected else edge.capacity * nominal_downtime_days
         if is_detected:
             detected += 1
         else:
-            lost_flow += edge.capacity
+            lost_volume += event_loss
         target_counts[edge.id] = target_counts.get(edge.id, 0) + 1
         events.append(
             {
                 "edge": edge.id,
                 "detected": is_detected,
                 "interdicted": is_detected,
-                "flow_lost_kbpd": 0.0 if is_detected else edge.capacity,
+                "throughput_lost_kbbl": event_loss,
             }
         )
     return {
@@ -488,7 +507,8 @@ def simulate_tamper(
         "detected": detected,
         "interdicted": detected,
         "detection_rate": detected / n_events if n_events else 0.0,
-        "flow_lost_kbpd": lost_flow,
+        "nominal_downtime_days": nominal_downtime_days,
+        "throughput_lost_kbbl": lost_volume,
         "most_targeted": max(target_counts, key=lambda k: target_counts[k])
         if target_counts
         else None,

@@ -340,10 +340,10 @@ class TestSimulateTamper:
         assert result["total_events"] == 40
         assert 0.0 <= result["detection_rate"] <= 1.0
         assert result["most_targeted"] in {e.id for e in net.edges}
-        # flow lost equals sum of capacities of undetected events
+        # volume lost equals sum of the undetected events' charged volumes
         undetected = [ev for ev in result["events"] if not ev["detected"]]
-        assert result["flow_lost_kbpd"] == pytest.approx(
-            sum(float(ev["flow_lost_kbpd"]) for ev in undetected)
+        assert result["throughput_lost_kbbl"] == pytest.approx(
+            sum(float(ev["throughput_lost_kbbl"]) for ev in undetected)
         )
 
     def test_no_sensors_never_detects(self) -> None:
@@ -358,7 +358,7 @@ class TestSimulateTamper:
         result = P.simulate_tamper(net, 10, 5)
         # every edge lacks a sensor -> no interdiction possible
         assert result["detected"] == 0
-        assert result["flow_lost_kbpd"] > 0
+        assert result["throughput_lost_kbbl"] > 0
 
     def test_all_sensors_detects_high_events(self) -> None:
         net = P.PipelineNetwork(

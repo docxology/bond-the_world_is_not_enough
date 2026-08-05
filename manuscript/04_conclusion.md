@@ -20,8 +20,10 @@ model shows that a single interconnector cut cascades into a
 (**{{RESULT_BLACKOUT_LOST_MW}} MW** lost) — the sabotage force multiplier that
 ties the pipeline and submarine threats together. Fifth, the bargaining layer
 quantifies how the syndrome raises the captor's reservation value
-(captor claim **{{RESULT_NEG_CAPTOR_SHARE}}**, a
-**{{RESULT_NEG_CAPTOR_LEVERAGE}}**-boost) while concession still closes by day
+(captor claim **{{RESULT_NEG_CAPTOR_SHARE}}** against a
+{{RESULT_NEG_BASELINE_SHARE}} baseline — a
+**{{RESULT_NEG_CAPTOR_LEVERAGE_PCT}}%** relative increase) while concession
+still closes by day
 **{{RESULT_NEG_SETTLEMENT_DAY}}**. Sixth, Kalman fusion makes the hijacked hull
 trackable, cutting position RMSE by **{{RESULT_TRACK_GAIN}}%**.
 

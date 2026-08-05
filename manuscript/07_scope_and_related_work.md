@@ -18,7 +18,16 @@ deliberate:
 - **Hostage model.** A phenomenological, bounded ODE system whose parameters
   encode the qualitative conditions catalogued in the literature. It is
   calibrated by construction to reproduce onset behaviour, not fitted to
-  individual case data, and is not a clinical diagnostic instrument.
+  individual case data, and is not a clinical diagnostic instrument. Because
+  the rate constants are chosen rather than estimated, the reported onset day,
+  peak and final index are properties *of this parameterisation* — they carry
+  no uncertainty interval and should not be read as a prediction about any
+  real captivity. The nine rates are listed in §5, Table 2.
+- **Tamper accounting.** The tamper simulation charges each undetected event
+  its segment's *rated* capacity for one nominal downtime day, so its output
+  is a cumulative volume (kbbl) and an upper bound: it prices spur tampering
+  above the spur's marginal delivery impact and does not model repair time,
+  partial throttling, or re-routing around the damaged segment.
 - **Power-grid model.** A lossless DC load flow and a deterministic sequential
   cascade. It omits reactive power, voltage collapse, generator ramping,
   frequency dynamics, and parallel-time-step tripping (all overloaded lines
@@ -66,6 +75,11 @@ variants but fully exercised here in its linear, deterministic form.
 conditions — perceived threat, small kindnesses, and prolonged contact —
 rather than a formal diagnosis. The model synthesises the conditions catalogued
 in the forensic review literature [@namnyak; @de_fabrique] into a quantitative
-dynamical system; where those sources are qualitative, our parameter choices
-are the modelling assumption and are exposed in `manuscript/config.yaml` for
-audit.
+dynamical system. Where those sources are qualitative, our parameter choices
+are the modelling assumption: all nine ODE rate constants, the initial state,
+and the small-kindness schedule are typed in `manuscript/config.yaml` under
+`experiment.hostage`, reproduced in §5 (Table 2), and consumed by the model —
+`tests/test_manuscript_variables.py` perturbs each one and asserts the reported
+syndrome index moves, so the exposure is auditable rather than decorative. The
+*form* of the equations, by contrast, is fixed in
+`hostage_psychology.derivatives` and is not configurable.
