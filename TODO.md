@@ -6,7 +6,7 @@ choke-point security, submarine evasion sonar, Stockholm-syndrome ODE dynamics,
 DC-power-flow cascading blackout, Rubinstein bargaining under syndrome-driven
 patience, Kalman sensor fusion) behind a thin frozen `bond_api.MissionProvider`
 adapter, with every manuscript number arriving as a hydrated `{{TOKEN}}`.
-Measured on 2026-08-05 in this working tree: **352 tests passed, 0 failed, 0
+Measured on 2026-08-05 in this working tree: **362 tests passed, 0 failed, 0
 skipped; 99.38% line+branch coverage on `src/`** (gate 90%), ruff clean, ruff
 format clean, mypy clean on `src/` + `scripts/`, and the strict token gate
 resolves 76 variables. Package surface is in [`README.md`](README.md), module
@@ -98,7 +98,7 @@ missing lines. (Recorded as out-of-scope in the unresolved-findings file:
 "Four residual uncovered branches remain outside my findings' scope".)
 
 **V3 — `docs/_generated/COUNTS.md` has no staleness gate.**
-Every number in that file (352 tests, 99.38%, 76 tokens, 8 plan steps, 29
+Every number in that file (362 tests, 99.38%, 76 tokens, 8 plan steps, 29
 result keys, 8 gadgets, 4 figures) is hand-copied from a run. Nothing
 re-measures them: `rg -l COUNTS tests/ scripts/` returns nothing. The table can
 drift silently the moment a test is added, which is exactly the failure the
