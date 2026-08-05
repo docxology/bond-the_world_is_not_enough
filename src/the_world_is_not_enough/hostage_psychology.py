@@ -31,6 +31,7 @@ diagnostic.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 __all__ = [
@@ -88,7 +89,7 @@ def threat_schedule(
     t: float,
 ) -> float:
     """Time-varying captivity threat: exponential decay to a residual floor."""
-    return params.threat_floor + params.threat_initial * math_exp(
+    return params.threat_floor + params.threat_initial * math.exp(
         -params.threat_decay * max(t, 0.0)
     )
 
@@ -97,15 +98,13 @@ def _kindness_input(
     events: tuple[KindnessEvent, ...], t: float, bandwidth: float = 0.5
 ) -> float:
     """Gaussian-smoothed kindness impulse train over days (SD = ``bandwidth``)."""
-    from math import exp, pi, sqrt
-
     total = 0.0
     for ev in events:
         d = t - ev.day
         total += (
             ev.magnitude
-            * exp(-0.5 * (d / bandwidth) ** 2)
-            / (bandwidth * sqrt(2.0 * pi))
+            * math.exp(-0.5 * (d / bandwidth) ** 2)
+            / (bandwidth * math.sqrt(2.0 * math.pi))
         )
     return total
 
@@ -292,10 +291,3 @@ def integrate_dynamics(
         onset_day=onset,
         influence_ratio=influence,
     )
-
-
-def math_exp(x: float) -> float:
-    """Exponential helper (isolated for deterministic, dependency-free use)."""
-    from math import exp
-
-    return exp(x)

@@ -391,3 +391,46 @@ class TestMisc:
         profile = P.normalize_risk_profile(net)
         assert sum(profile.values()) == pytest.approx(1.0)
         assert set(profile) == {e.id for e in net.edges}
+
+
+class TestNetworkValidationEdges:
+    """Constructor and mutation guards that no other test reaches."""
+
+    def test_blank_source_rejected(self) -> None:
+        with pytest.raises(ValueError, match="source"):
+            P.PipelineNetwork(source="   ", sink="TERM")
+
+    def test_blank_sink_rejected(self) -> None:
+        with pytest.raises(ValueError, match="sink"):
+            P.PipelineNetwork(source="PUMP0", sink="")
+
+    def test_add_edge_rejects_non_edge(self) -> None:
+        network = P.PipelineNetwork(source="A", sink="B")
+        with pytest.raises(TypeError, match="PipelineEdge"):
+            network.add_edge("A->B")  # type: ignore[arg-type]
+
+    def test_betweenness_of_an_empty_network_is_empty(self) -> None:
+        network = P.PipelineNetwork(source="A", sink="B")
+        assert P.edge_betweenness(network) == {}
+
+    def test_risk_profile_of_zero_risk_network_is_all_zero(self) -> None:
+        network = P.PipelineNetwork(source="A", sink="B")
+        network.add_edge(P.PipelineEdge("A", "M", 100.0, 0.0))
+        network.add_edge(P.PipelineEdge("M", "B", 100.0, 0.0))
+        profile = P.normalize_risk_profile(network)
+        assert profile == {"A->M": 0.0, "M->B": 0.0}
+
+    def test_risk_profile_normalizes_to_one(self) -> None:
+        profile = P.normalize_risk_profile(P.default_pipeline())
+        assert sum(profile.values()) == pytest.approx(1.0)
+
+    def test_choke_threshold_is_the_named_constant(self) -> None:
+        """The choke rule must read the constant, not an inlined literal."""
+        assert P.CHOKE_UTILIZATION_THRESHOLD == 0.9
+        network = P.default_pipeline()
+        report = P.analyze_choke_points(network)
+        utilization = report["utilization"]
+        assert isinstance(utilization, dict)
+        chokes = set(report["choke_points"])  # type: ignore[call-overload]
+        for edge_id, value in utilization.items():
+            assert (edge_id in chokes) == (value >= P.CHOKE_UTILIZATION_THRESHOLD)

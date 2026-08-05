@@ -13,6 +13,7 @@ The consuming orchestrator is ``scripts/z_generate_manuscript_variables.py``
 
 from __future__ import annotations
 
+import math
 import platform
 import re
 from datetime import datetime, timezone
@@ -192,12 +193,50 @@ def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
             else "none"
         ),
         "RESULT_NEG_CAPTOR_SHARE": _fmt(captor_share),
+        "RESULT_NEG_BASELINE_SHARE": _fmt(baseline),
         "RESULT_NEG_CAPTOR_LEVERAGE": _fmt(leverage),
         "RESULT_TRACK_RMSE": _fmt(float(fusion["filter_rmse"])),
         "RESULT_TRACK_MEASUREMENT_RMSE": _fmt(float(fusion["measurement_rmse"])),
         "RESULT_TRACK_FINAL_ERROR": _fmt(float(fusion["final_position_error"])),
         "RESULT_TRACK_GAIN": _fmt(float(fusion["filter_gain"]) * 100.0),
     }
+
+
+#: Sentinel strings a domain token is allowed to carry when a model genuinely
+#: has no value to report (e.g. an onset that never occurs).
+_ALLOWED_SENTINELS = frozenset({"not reached", "none"})
+
+
+def _assert_measurable(result_tokens: dict[str, str]) -> None:
+    """Fail loudly when a ``RESULT_*`` token is empty or non-finite.
+
+    This is the strict-mode gate. It is *not* satisfiable by construction: a
+    model that returns ``nan``/``inf`` (a singular solve, a divide-by-zero
+    normalisation) formats to ``"nan"``/``"inf"`` and is rejected here rather
+    than being rendered into the manuscript as a measured result.
+
+    Raises:
+        ValueError: if the model run produced no tokens, or a token is blank
+            or carries a non-finite numeric value.
+    """
+    if not result_tokens:
+        raise ValueError(
+            "domain models produced no result tokens — cannot hydrate manuscript"
+        )
+    for name, value in sorted(result_tokens.items()):
+        text = value.strip()
+        if not text:
+            raise ValueError(f"manuscript token {name} resolved to an empty value")
+        if text in _ALLOWED_SENTINELS:
+            continue
+        try:
+            numeric = float(text)
+        except ValueError:
+            continue  # a categorical token (e.g. a segment id) — nothing to check
+        if not math.isfinite(numeric):
+            raise ValueError(
+                f"manuscript token {name} resolved to a non-finite value {text!r}"
+            )
 
 
 def generate_variables(
@@ -222,14 +261,8 @@ def generate_variables(
         raise TypeError("manuscript config 'paper' section must be a mapping")
 
     result_tokens = _run_domain_tokens(config)
-    # The result tokens are the strict-mode gate: if the models produced no
-    # measurable output (impossible here), fail rather than render N/A.
-    if require_outputs and (
-        not result_tokens or "RESULT_MAX_FLOW" not in result_tokens
-    ):
-        raise ValueError(
-            "domain models produced no result tokens — cannot hydrate manuscript"
-        )
+    if require_outputs:
+        _assert_measurable(result_tokens)
 
     timestamp = (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
     return {
@@ -257,25 +290,53 @@ def _config_tokens(config: dict[str, Any]) -> dict[str, str]:
     negotiation = experiment.get("negotiation", {}) or {}
     fusion = experiment.get("fusion", {}) or {}
     sensors = submarine.get("sensors", []) or []
+    network = pipeline_security.default_pipeline()
+    grid = power_grid.default_power_grid()
+    outage_id = str(power.get("initial_outage", "3->5"))
+    strong_tie = grid.line_id(outage_id)
+    # The "weak tie" is the other interconnector into the strong tie's load-area
+    # bus: same target bus, lower rating. Derived from the dataset, never typed.
+    weak_ties = sorted(
+        (
+            line
+            for line in grid.lines
+            if line.target == strong_tie.target and line.id != strong_tie.id
+        ),
+        key=lambda line: line.capacity_mw,
+    )
+    weak_tie = weak_ties[0] if weak_ties else strong_tie
     return {
         "CONFIG_SEED": str(experiment.get("seed", 1999)),
+        "CONFIG_PIPELINE_NODES": str(network.node_count()),
+        "CONFIG_PIPELINE_SEGMENTS": str(network.edge_count),
+        "CONFIG_CHOKE_UTILIZATION": _fmt(
+            pipeline_security.CHOKE_UTILIZATION_THRESHOLD * 100.0, 0
+        ),
         "CONFIG_TAMPER_EVENTS": str(int(pipeline.get("tamper_events", 40))),
         "CONFIG_DETECTION_PROBABILITY": _fmt(
             float(pipeline.get("detection_probability", 0.85))
         ),
         "CONFIG_SUB_GRID": str(int(submarine.get("grid_size", 16))),
+        "CONFIG_SUB_STEP_KM": _fmt(float(submarine.get("step_m", 3000.0)) / 1000.0, 0),
         "CONFIG_SUB_SENSORS": str(len(sensors)),
         "CONFIG_HOSTAGE_DAYS": _fmt(float(hostage.get("days", 30.0)), 1),
         "CONFIG_HOSTAGE_DT": _fmt(float(hostage.get("dt", 0.25))),
         "CONFIG_HOSTAGE_ONSET": _fmt(float(hostage.get("onset_threshold", 0.5))),
-        "CONFIG_GRID_BUSES": str(int(power_grid.default_power_grid().n_buses)),
-        "CONFIG_GRID_LINES": str(len(power_grid.default_power_grid().lines)),
-        "CONFIG_GRID_INITIAL_OUTAGE": str(power.get("initial_outage", "3->5")),
+        "CONFIG_GRID_BUSES": str(grid.n_buses),
+        "CONFIG_GRID_LINES": str(len(grid.lines)),
+        "CONFIG_GRID_LOAD_MW": _fmt(power_grid.total_load(grid), 0),
+        "CONFIG_GRID_INITIAL_OUTAGE": outage_id,
+        "CONFIG_GRID_STRONG_TIE_MW": _fmt(strong_tie.capacity_mw, 0),
+        "CONFIG_GRID_WEAK_TIE": weak_tie.id,
+        "CONFIG_GRID_WEAK_TIE_MW": _fmt(weak_tie.capacity_mw, 0),
         "CONFIG_NEG_DEADLINE_DAYS": _fmt(
             float(negotiation.get("deadline_days", 10.0)), 1
         ),
         "CONFIG_NEG_NEGOTIATOR_DISCOUNT": _fmt(
             float(negotiation.get("negotiator_discount", 0.90))
+        ),
+        "CONFIG_NEG_CONCESSION_RATE": _fmt(
+            float(negotiation.get("concession_rate", 0.08))
         ),
         "CONFIG_FUSION_STEPS": str(int(fusion.get("steps", 20))),
         "CONFIG_FUSION_MEASUREMENT_NOISE": _fmt(

@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
+import yaml
 
 from the_world_is_not_enough import manuscript_variables as MV
 
@@ -79,6 +80,111 @@ class TestGenerateVariables:
     def test_strict_require_outputs(self) -> None:
         # require_outputs=False still resolves everything (results are measured inline)
         assert MV.generate_variables() == MV.generate_variables(require_outputs=False)
+
+    def test_derived_dataset_tokens_match_the_models(self) -> None:
+        """CONFIG_* tokens describing the datasets are derived, never typed."""
+        from the_world_is_not_enough import pipeline_security, power_grid
+
+        variables = MV.generate_variables()
+        network = pipeline_security.default_pipeline()
+        grid = power_grid.default_power_grid()
+        assert variables["CONFIG_PIPELINE_NODES"] == str(network.node_count())
+        assert variables["CONFIG_PIPELINE_SEGMENTS"] == str(network.edge_count)
+        assert variables["CONFIG_GRID_BUSES"] == str(grid.n_buses)
+        assert variables["CONFIG_GRID_LINES"] == str(len(grid.lines))
+        assert variables["CONFIG_CHOKE_UTILIZATION"] == "90"
+        assert variables["CONFIG_GRID_STRONG_TIE_MW"] == "400"
+        assert variables["CONFIG_GRID_WEAK_TIE"] == "4->5"
+        assert variables["CONFIG_GRID_WEAK_TIE_MW"] == "150"
+        assert variables["CONFIG_GRID_LOAD_MW"] == "500"
+
+    def test_negotiation_baseline_is_the_unboosted_equilibrium(self) -> None:
+        """RESULT_NEG_BASELINE_SHARE must equal the no-syndrome equilibrium."""
+        from the_world_is_not_enough import negotiation_tactics
+
+        variables = MV.generate_variables()
+        params = negotiation_tactics.NegotiationParams(
+            deadline_days=10.0, negotiator_discount=0.90, concession_rate=0.08
+        )
+        expected, _ = negotiation_tactics.equilibrium_shares(
+            params.captor_discount_base, params.negotiator_discount
+        )
+        assert variables["RESULT_NEG_BASELINE_SHARE"] == f"{expected:.3f}"
+        assert float(variables["RESULT_NEG_CAPTOR_SHARE"]) > expected
+
+    def test_experiment_section_must_be_a_mapping(self, tmp_path: Path) -> None:
+        bad = tmp_path / "bad.yaml"
+        bad.write_text(
+            "paper: {title: T}\nexperiment: not-a-mapping\n", encoding="utf-8"
+        )
+        with pytest.raises(TypeError, match="experiment"):
+            MV.generate_variables(config_path=bad)
+
+    def test_config_token_helper_rejects_a_non_mapping_experiment(self) -> None:
+        with pytest.raises(TypeError, match="experiment"):
+            MV._config_tokens({"experiment": "not-a-mapping"})
+
+    def test_paper_section_must_be_a_mapping(self, tmp_path: Path) -> None:
+        bad = tmp_path / "bad.yaml"
+        bad.write_text("paper: not-a-mapping\nexperiment: {seed: 1999}\n", "utf-8")
+        with pytest.raises(TypeError, match="paper"):
+            MV.generate_variables(config_path=bad)
+
+
+class TestMeasurabilityGate:
+    """`_assert_measurable` must be able to fail — it is not green by construction."""
+
+    def test_accepts_the_real_measured_tokens(self) -> None:
+        MV._assert_measurable(MV.generate_variables())
+
+    def test_rejects_an_empty_token_map(self) -> None:
+        with pytest.raises(ValueError, match="no result tokens"):
+            MV._assert_measurable({})
+
+    def test_rejects_a_blank_value(self) -> None:
+        with pytest.raises(ValueError, match="empty value"):
+            MV._assert_measurable({"RESULT_MAX_FLOW": "   "})
+
+    @pytest.mark.parametrize("bad", ["nan", "inf", "-inf"])
+    def test_rejects_non_finite_values(self, bad: str) -> None:
+        with pytest.raises(ValueError, match="non-finite"):
+            MV._assert_measurable({"RESULT_MAX_FLOW": bad})
+
+    def test_allows_sentinels_and_categorical_values(self) -> None:
+        MV._assert_measurable(
+            {
+                "RESULT_SYNDROME_ONSET_DAY": "not reached",
+                "RESULT_NEG_SETTLEMENT_SPLIT": "none",
+                "RESULT_TOP_CHOKE_POINT": "J4->J5",
+            }
+        )
+
+    def test_rejects_a_real_token_map_with_one_value_corrupted(self) -> None:
+        """The gate rejects exactly the map the manuscript would otherwise render.
+
+        The failure path cannot currently be reached through
+        ``generate_variables`` with any config: every domain model validates
+        its own inputs and refuses a degenerate experiment block before a
+        non-finite value can be produced (see
+        ``test_degenerate_config_is_refused_by_the_models``). The gate is
+        defence in depth against a future model change, so it is exercised
+        here against the real token map with a single value corrupted.
+        """
+        variables = MV.generate_variables()
+        assert "RESULT_BLACKOUT_FRACTION" in variables
+        corrupted = dict(variables)
+        corrupted["RESULT_BLACKOUT_FRACTION"] = "nan"
+        with pytest.raises(ValueError, match="RESULT_BLACKOUT_FRACTION"):
+            MV._assert_measurable(corrupted)
+
+    def test_degenerate_config_is_refused_by_the_models(self, tmp_path: Path) -> None:
+        """Degenerate experiment blocks fail loudly upstream of the gate."""
+        config = MV.load_manuscript_config()
+        config["experiment"]["hostage"]["days"] = 0.0
+        bad = tmp_path / "degenerate.yaml"
+        bad.write_text(yaml.safe_dump(config), encoding="utf-8")
+        with pytest.raises(ValueError, match="days must be positive"):
+            MV.generate_variables(config_path=bad)
 
 
 class TestResolveTree:

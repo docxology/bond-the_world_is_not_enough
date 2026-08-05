@@ -22,7 +22,21 @@ deterministic experiment block; every numeric value is injected as a
   any `{{TOKEN}}` in a numbered section is not generated.
 - Figures are referenced via pandoc-crossref labels `[@fig:...]`
   (`#fig:pipeline_network`, `#fig:submarine_detection`,
-  `#fig:hostage_dynamics`).
+  `#fig:hostage_dynamics`, `#fig:sensor_fusion_track`).
+
+## Section map
+
+| Section | Covers |
+| --- | --- |
+| `00_abstract.md` | All six pillars, headline result tokens |
+| `01_introduction.md` | Film-to-computation mapping, how the pillars couple |
+| `02_methodology.md` | §2.1 pipeline · §2.2 sonar/evasion · §2.3 hostage ODE · §2.4 DC power flow + cascade · §2.5 Rubinstein bargaining · §2.6 Kalman fusion |
+| `03_results.md` | §3.1–§3.6, one per pillar, four figures |
+| `04_conclusion.md` | Six findings, all token-backed |
+| `05_experimental_setup.md` | The full `CONFIG_*` parameter table |
+| `06_reproducibility.md` | Determinism guarantees, regeneration commands, artifact inventory |
+| `07_scope_and_related_work.md` | Per-model scope limits and the literature anchors |
+| `99_references.md` | Citation index into `references.bib` |
 
 Hydrate resolved copies:
 

@@ -230,3 +230,31 @@ class TestEvasionResult:
         assert d["path"] == [[0, 0], [1, 0]]
         assert d["cumulative_exposure"] == 0.5
         assert d["path_length"] == 2
+
+
+class TestEvasionUnreachableGoal:
+    """The disconnection guard in `dijkstra_evasion` is reachable, not dead code."""
+
+    def test_infinite_risk_wall_blocks_the_goal(self) -> None:
+        # An infinite-cost column splits the lattice: every candidate cost is
+        # inf, so `new_cost < dist` never holds and the goal is never settled.
+        risk = np.full((6, 6), 0.1, dtype=np.float64)
+        risk[:, 3] = np.inf
+        with pytest.raises(ValueError, match="no path exists"):
+            S.dijkstra_evasion(risk, start=(0, 0), goal=(5, 5))
+
+    def test_the_same_field_without_the_wall_is_routable(self) -> None:
+        """Positive control: only the wall causes the failure."""
+        risk = np.full((6, 6), 0.1, dtype=np.float64)
+        result = S.dijkstra_evasion(risk, start=(0, 0), goal=(5, 5))
+        assert result.path[0] == (0, 0)
+        assert result.path[-1] == (5, 5)
+        assert result.cumulative_exposure == pytest.approx(0.1 * 10)
+
+    def test_sensor_y_and_level_validation(self) -> None:
+        with pytest.raises(ValueError, match="Sensor.y"):
+            S.Sensor(x=1, y=-1)
+        with pytest.raises(ValueError, match="source_level"):
+            S.Sensor(x=1, y=1, source_level=-1.0)
+        with pytest.raises(ValueError, match="noise_level"):
+            S.Sensor(x=1, y=1, noise_level=-1.0)

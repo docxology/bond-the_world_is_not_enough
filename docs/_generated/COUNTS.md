@@ -1,21 +1,42 @@
 # COUNTS — the_world_is_not_enough (ELEKTRA)
 
-Live, generated counts for this package (recompute on meaningful changes; do
-not let prose drift from them).
+Live, measured counts for this package. Every row below was read off a real
+run of the commands in the "Regenerate" section — do not hand-edit a value,
+and do not let prose elsewhere in the package restate one.
 
 | Metric | Value |
 | --- | --- |
-| Test count (pytest) | 230 |
-| Line + branch coverage on `src/` | 97.15% (gate: ≥90%) |
+| Test count (pytest, 0 failed / 0 skipped) | 298 |
+| Line + branch coverage on `src/` | 99.35% (gate: ≥90%) |
 | Coverage gate | `uv run pytest tests/ --cov=src --cov-fail-under=90` |
-| Domain modules | 6 (`pipeline_security`, `sub_defense`, `hostage_psychology`, `power_grid`, `negotiation_tactics`, `sensor_fusion`) |
+| Mocks | 0 (no `unittest.mock` / `MagicMock` / `mocker.patch` / `monkeypatch`) |
+| Domain modules (pure) | 6 (`pipeline_security`, `sub_defense`, `hostage_psychology`, `power_grid`, `negotiation_tactics`, `sensor_fusion`) |
+| Support modules | 3 (`mission`, `manuscript_variables`, `figures`) |
 | MissionProvider stages | 5 (brief, recon, plan, execute, debrief) |
 | Mission plan steps | 8 |
+| Mission result keys | 29 |
+| Debrief lessons (derived from the outcome) | 6 |
+| Registered gadgets | 8 |
+| Manuscript tokens generated | 60 (24 `CONFIG_*`, 29 `RESULT_*`, 7 identity/environment) |
+| Manuscript sections | 9 (`00`–`07` plus `99_references`) |
 | Concept figures | 4 |
-| Manuscript sections | 8 (00–07) + references |
+| ruff / mypy | clean on `src/`, `scripts/`, `tests/` |
 
 ## Regenerate
 
 ```bash
-uv run pytest tests/ --cov=src --cov-fail-under=90 -q | tail -1
+# test count + coverage (the two headline rows)
+uv run pytest tests/ --cov=src --cov-fail-under=90 -q | tail -3
+
+# token counts (writes output/data/manuscript_variables.json)
+uv run python scripts/z_generate_manuscript_variables.py
+
+# figures
+uv run python scripts/generate_figures.py
+
+# structural counts: plan steps, result keys, gadgets
+uv run python -c "import sys; sys.path.insert(0, 'src'); \
+from the_world_is_not_enough import mission; p = mission.MissionProvider(); \
+plan = p.plan(p.brief()); print(len(plan.steps), len(p.execute(plan).results), \
+len(mission.GADGETS.gadgets_for(mission.FILM)))"
 ```

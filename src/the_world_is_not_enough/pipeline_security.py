@@ -32,7 +32,14 @@ from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
+#: A load-bearing segment counts as a *choke point* once its utilization
+#: (carried flow / rated capacity) reaches this fraction. Exposed as a named
+#: constant so the manuscript can cite it as a token rather than repeating the
+#: literal in prose.
+CHOKE_UTILIZATION_THRESHOLD = 0.9
+
 __all__ = [
+    "CHOKE_UTILIZATION_THRESHOLD",
     "PipelineEdge",
     "PipelineNetwork",
     "analyze_choke_points",
@@ -398,7 +405,8 @@ def analyze_choke_points(network: PipelineNetwork) -> dict[str, object]:
 
     Combines max-flow/min-cut, edge-betweenness, flow-criticality, and
     capacity utilization into a single ranking. A **choke point** is a
-    load-bearing segment running at >= 90% of its rated capacity — the
+    load-bearing segment running at or above
+    :data:`CHOKE_UTILIZATION_THRESHOLD` of its rated capacity — the
     constriction a tamper event or a cut would exploit with the greatest
     throughput impact.
     """
@@ -408,7 +416,11 @@ def analyze_choke_points(network: PipelineNetwork) -> dict[str, object]:
     criticality = flow_criticality(network, base_flow=max_flow)
     utilization = edge_utilization(network, base_flow=max_flow)
 
-    choke_points = [edge for edge in network.edges if utilization[edge.id] >= 0.9]
+    choke_points = [
+        edge
+        for edge in network.edges
+        if utilization[edge.id] >= CHOKE_UTILIZATION_THRESHOLD
+    ]
     choke_points.sort(
         key=lambda e: (utilization[e.id], criticality[e.id], e.id),
         reverse=True,

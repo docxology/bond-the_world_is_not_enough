@@ -161,7 +161,33 @@ class TestIntegrate:
         assert "fear_final" in d
 
 
-class TestMathExp:
-    def test_values(self) -> None:
-        assert H.math_exp(0.0) == pytest.approx(1.0)
-        assert H.math_exp(1.0) == pytest.approx(math.e)
+class TestThreatDecayAnalytic:
+    """The threat schedule must match its closed form, not merely be monotone."""
+
+    def test_matches_closed_form_at_sampled_days(self) -> None:
+        params = H.DynamicsParams(
+            threat_floor=0.15, threat_initial=0.8, threat_decay=0.25
+        )
+        for day in (0.0, 1.0, 4.0, 12.5, 30.0):
+            expected = 0.15 + 0.8 * math.exp(-0.25 * day)
+            assert H.threat_schedule(params, day) == pytest.approx(expected, rel=1e-12)
+
+    def test_decays_toward_floor_but_never_below(self) -> None:
+        params = H.DynamicsParams(
+            threat_floor=0.15, threat_initial=0.8, threat_decay=0.25
+        )
+        assert H.threat_schedule(params, 0.0) == pytest.approx(0.95)
+        # Strictly above the floor but converging onto it: decay is asymptotic,
+        # so the residual threat never vanishes within the mission horizon.
+        far = H.threat_schedule(params, 60.0)
+        assert far > params.threat_floor
+        assert far == pytest.approx(params.threat_floor, abs=1e-6)
+        assert H.threat_schedule(params, 60.0) < H.threat_schedule(params, 30.0)
+
+    def test_negative_time_clamps_to_zero(self) -> None:
+        params = H.DynamicsParams(
+            threat_floor=0.15, threat_initial=0.8, threat_decay=0.25
+        )
+        assert H.threat_schedule(params, -5.0) == pytest.approx(
+            H.threat_schedule(params, 0.0)
+        )

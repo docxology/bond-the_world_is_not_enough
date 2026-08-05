@@ -1,117 +1,92 @@
 # TODO — the_world_is_not_enough (ELEKTRA)
 
-## Built (phase-2 mission implementation)
+Remaining work only. What is already built is described in
+[`README.md`](README.md) (package surface) and
+[`docs/architecture.md`](docs/architecture.md) (module by module); measured
+counts live in [`docs/_generated/COUNTS.md`](docs/_generated/COUNTS.md). This
+file does not duplicate any of that.
 
-### Pure domain core (`src/the_world_is_not_enough/`)
-- `pipeline_security.py` — capacitated flow network of the Caspian trunk;
-  Edmonds–Karp max-flow/min-cut, Brandes edge-betweenness, capacity
-  utilization, sensor coverage, deterministic tamper simulation,
-  `analyze_choke_points` report.
-- `sub_defense.py` — passive-sonar equation + normal-CDF detection link,
-  deterministic risk map, Dijkstra least-risk evasion routing (4-connected,
-  self-gauging vs. monotone baseline), bearing triangulation.
-- `hostage_psychology.py` — four-state Stockholm-syndrome ODE model
-  (fear/gratitude/identification/threat) with fixed-step RK4, onset/peak/final
-  syndrome metrics, influence ratio.
+## Open — model extensions
 
-### Protocol adapter
-- `mission.py` — `ELEKTRA` `MissionProvider` implementing the frozen
-  `bond_api` protocol; `Provenance(seed=1999, wall_time_s=0.0, input_hash)`;
-  `GADGETS` registered at import (`pipeline_analysis`, `tamper_simulation`,
-  `evasion_analysis`, `hostage_dynamics`, `mission_input_hash`).
-- `manuscript_variables.py` — `{{TOKEN}}` hydration from
-  `manuscript/config.yaml` + measured outputs (config + result token families).
-- `figures.py` — three deterministic concept figures.
+These are genuine follow-ups, each a scoped piece of work, not aspirations.
 
-### Scripts
-- `scripts/brief.py`, `recon.py`, `plan.py`, `execute.py`, `debrief.py`,
-  `generate_figures.py`, `z_generate_manuscript_variables.py` — thin,
-  canonical-JSON emitting phase CLIs. `execute.py` persists provenance via
-  `bond_utilities.mission_io.record_provenance_outcome` at a fixed mission
-  epoch.
+- **Frequency-dependent sonar propagation.** `sub_defense.passive_sonar_snr`
+  uses spherical spreading plus a single absorption coefficient. A
+  frequency-banded transmission-loss model (Thorp absorption, or a simple
+  bottom-bounce term) would change the shape of the risk field and therefore
+  the routed path. Requires a new `Sensor` field and a scope-section update.
+- **Parallel cascade tripping.** `power_grid.cascade_failure` trips the single
+  most-overloaded line per step. Real cascades trip every overloaded line in a
+  time step. The sequential rule makes the reported blackout a conservative
+  lower bound; implementing the parallel variant as an option (and reporting
+  both) would remove that caveat from
+  `manuscript/07_scope_and_related_work.md`.
+- **Bearing-only target-motion analysis.** `sensor_fusion` fuses noisy
+  *position* fixes because bearing-only tracking from a stationary observer is
+  scale-ambiguous. Batch least-squares TMA from a manoeuvring observer would
+  make the pillar match the film's geometry more honestly. This is the largest
+  of the three.
+- **Asymmetric-information bargaining.** `negotiation_tactics` assumes both
+  parties know both discount factors. A one-sided-uncertainty variant would
+  make the stalemate threshold a distribution rather than a point.
 
-### Tests
-- Per-domain (`test_pipeline_security.py`, `test_sub_defense.py`,
-  `test_hostage_psychology.py`), adapter (`test_mission.py`), figures,
-  manuscript variables (incl. live token cross-reference), script smoke.
-  Zero mocks; 148 tests; 97%+ line+branch coverage on `src/`.
+## Open — modelling assumptions to revisit
 
-## Built (phase-4 deep improvement)
+- **Syndrome → patience mapping.** `captor_discount_from_syndrome` is a
+  declared linear assumption (`clamp(base + gain * S)`), not a fitted
+  relationship. It is the only cross-pillar data dependency in the package, so
+  it carries real weight in §3.5. If bargaining-under-duress data becomes
+  available, replace the mapping and re-derive; until then it must stay
+  labelled as an assumption in the scope section.
+- **Hostage-model parameters.** Calibrated by construction to reproduce onset
+  behaviour, not fitted to case data. Exposed in `manuscript/config.yaml` for
+  audit. Same rule: if it is ever fitted, the scope section changes with it.
 
-### New pure domain modules (energy infrastructure + hostage engineering)
-- `power_grid.py` — energy infrastructure: DC power flow (susceptance-matrix
-  solve with slack-connected live component) and a deterministic sequential
-  cascading-failure blackout (`cascade_failure`). Canonical two-area corridor:
-  cutting the strong `3->5` tie reroutes transfer onto the weak `4->5` tie,
-  which trips and islands the whole 220 MW load area (44% blackout).
-- `negotiation_tactics.py` — hostage negotiation: Rubinstein alternating-offer
-  equilibrium (`equilibrium_shares`), syndrome-driven captor patience
-  (`captor_discount_from_syndrome`), and a deterministic concession model
-  (`settlement_analysis`) reporting settlement day/split or stalemate/deadline.
-  The hostage-psychology syndrome feeds the bargaining layer.
-- `sensor_fusion.py` — submarine tracking: constant-velocity linear Kalman
-  filter (predict/update, covariance), deterministic seeded measurement
-  generation, and RMSE/gain metrics vs. the raw fixes.
+## Open — small, mechanical
 
-### Deepened adapter + wiring
-- `mission.py` — protocol surface **unchanged** (frozen `MissionProvider`,
-  module-level `GADGETS`); internals deepened to 8 plan steps / richer result
-  dict. New gadgets: `power_cascade`, `negotiation_settlement`,
-  `submarine_tracking`.
-- `manuscript_variables.py` — new `CONFIG_GRID_*`, `CONFIG_NEG_*`,
-  `CONFIG_FUSION_*` and `RESULT_BLACKOUT_*`, `RESULT_NEG_*`, `RESULT_TRACK_*`
-  tokens; `_config_tokens` extended.
-- `figures.py` — fourth figure `sensor_fusion_track.png` (Kalman track vs
-  truth vs fixes).
+- **Residual uncovered branches.** A handful of defensive `continue` branches
+  in `pipeline_security` (visited-node skips) and `power_grid` (empty-active
+  break) are unexercised. They are cheap to cover; decide per branch whether
+  the honest move is a test or a deletion.
+- **`_config_tokens` duplication.** The tokens mirroring `mission.py`'s module
+  constants are declared in two places (the config block and the adapter
+  constants). They are asserted equal by the manuscript tests, but a single
+  source would be better than a tested duplicate.
 
-### Tests
-- New `test_power_grid.py`, `test_negotiation_tactics.py`,
-  `test_sensor_fusion.py`; extended `test_mission.py` (8 steps, new
-  result/gadget assertions), `test_figures.py` (4 figures), and
-  `test_manuscript_variables.py` (new token values). 230 tests; 97.15%
-  line+branch coverage on `src/`.
-
-### Manuscript
-- Abstract, methodology (2.4–2.6), results (3.4–3.6 + sensor-fusion figure),
-  conclusion, experimental setup, reproducibility, and scope/related-work
-  updated with the deepened outputs; `references.bib` extended with Stott
-  (1974), Dobson *et al.* (2001), Rubinstein (1982), and Kalman (1960).
-
-## Declared integration points / follow-ups
+## Integration points (no action needed here)
 
 - **Orchestrator binding.** The package is discoverable by slug
-  (`the_world_is_not_enough.mission.MissionProvider`) and registers
-  `GADGETS`; a future bond-orchestrator run should consume both via
-  `bond_api.discovery` / `GadgetRegistry`. No action needed here.
+  (`the_world_is_not_enough.mission.MissionProvider`) and registers `GADGETS`
+  at import. A bond-orchestrator run consumes both via `bond_api.discovery`
+  and `GadgetRegistry`. The public shape is frozen — see
+  [`docs/agent_instructions.md`](docs/agent_instructions.md).
 - **Provenance helper.** Persistence is bound to
-  `bond_utilities.mission_io.record_provenance_outcome`; if bond-utilities'
-  API changes, re-sync the call in `scripts/execute.py`.
-- **Sonar model.** The passive equation is simplified (spherical spreading +
-  absorption); a frequency-dependent propagation model is a natural extension.
-- **Power-grid model.** The DC cascade is lossless and sequential; a parallel
-  (all-overloaded-trip) cascade, reactive/voltage physics, or stochastic
-  outage sampling would extend it.
-- **Sensor fusion.** The filter fuses noisy position fixes; true
-  bearing-only fusion from a maneuvering observer (batch least-squares TMA) is
-  a documented follow-up.
-- **Hostage model.** Parameters are a modeling assumption exposed in
-  `manuscript/config.yaml`; fitting to case data (if datasets become
-  available) would replace the by-construction calibration.
+  `bond_utilities.mission_io.record_provenance_outcome`. If bond-utilities'
+  API changes, re-sync the single call site in `scripts/execute.py`.
 
-## Guardrail status (verified before commit)
+## Done — do not re-open
 
-- [x] `uv run pytest tests/ --cov=src --cov-fail-under=90` passes
-- [x] `ruff check` + `ruff format` clean on `src/ scripts/ tests/`
-- [x] `mypy src/ scripts/` clean
-- [x] `rg "template[_]code_project"` → zero (bracket-split pattern)
-- [x] no mocks (no unittest.mock / MagicMock / @patch)
-- [x] `git status` clean after commit
+Recorded so a future pass does not re-litigate them:
 
-## Verification commands
+- Six pillars implemented, tested, and written into the manuscript
+  (§2.1–2.6 / §3.1–3.6) with every metric arriving as a `{{TOKEN}}`.
+- Dead "slack bus islanded" branch removed from `dc_power_flow`; the guard was
+  unreachable *and* silently returned an empty flow map.
+- Manuscript hydration gate rewritten from a green-by-construction key check
+  into a real blank/non-finite rejection, with tests that fail it.
+- Escaped-backslash LaTeX corruption fixed in methodology §2.4–2.6.
+- `hostage_psychology.math_exp` (a `math.exp` wrapper with a tautological
+  test) removed.
+
+## Guardrails
 
 ```bash
 uv run pytest tests/ --cov=src --cov-fail-under=90
-uv run ruff check src/ scripts/ tests/ && uv run ruff format src/ scripts/ tests/
+uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/
 uv run mypy src/ scripts/
+uv run python scripts/z_generate_manuscript_variables.py   # strict token gate
 rg -n "template[_]code_project" . --glob '!uv.lock' --glob '!.git/**' || echo clean
 ```
+
+All five must pass before a commit lands. The coverage floor is 90%; the
+achieved figure is recorded in `docs/_generated/COUNTS.md`, not quoted here.

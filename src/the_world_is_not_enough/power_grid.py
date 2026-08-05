@@ -203,16 +203,12 @@ def dc_power_flow(grid: PowerGrid) -> dict[str, Any]:
     """
     if not grid.lines:
         raise ValueError("dc_power_flow requires at least one line")
+    # grid_connectivity() seeds its search at the slack bus, so the slack bus is
+    # always a member of `connected` — no separate "slack islanded" branch is
+    # possible (a guard for it would be dead code that silently returned an
+    # empty flow map).
     connected = grid_connectivity(grid)
     theta: np.ndarray = np.zeros(grid.n_buses, dtype=np.float64)
-    if (
-        grid.slack_bus not in connected
-    ):  # unreachable: slack is always in its own component
-        return {
-            "theta": [float(v) for v in theta],
-            "flows": {},
-            "slack_bus": grid.slack_bus,
-        }
     solve_buses = [bus for bus in sorted(connected) if bus != grid.slack_bus]
     flows: dict[str, float] = {}
     if not solve_buses:

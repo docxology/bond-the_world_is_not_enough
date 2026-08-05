@@ -17,7 +17,8 @@ capacity whose removal starves the line — also has capacity
 max-flow/min-cut theorem requires. Utilization analysis isolates a single
 principal choke point, segment **{{RESULT_TOP_CHOKE_POINT}}**, which is the
 only load-bearing segment running at full rated capacity
-({{RESULT_CHOKE_POINT_COUNT}} segment in total above the 90% threshold).
+({{RESULT_CHOKE_POINT_COUNT}} segment in total at or above the
+{{CONFIG_CHOKE_UTILIZATION}}% utilization threshold).
 Figure @fig:pipeline_network renders the graph with flow-criticality weighting
 and choke-point emphasis [@fig:pipeline_network].
 
@@ -67,11 +68,13 @@ anticipate.
 
 In the canonical two-area grid, intact operation keeps both interconnectors
 within rating (the strong `{{CONFIG_GRID_INITIAL_OUTAGE}}` tie carries the
-larger share; the weak tie stays below its 150 MW limit). Cutting the strong
+larger share; the weak `{{CONFIG_GRID_WEAK_TIE}}` tie stays below its
+{{CONFIG_GRID_WEAK_TIE_MW}} MW limit). Cutting the strong
 interconnector forces the entire Area-B transfer onto the weak tie, which
 overloads and trips. The cascade — **{{RESULT_BLACKOUT_STEPS}}** tripping step
 after the initial outage, **{{RESULT_BLACKOUT_LINES_TRIPPED}}** lines tripped
-total — islands the whole load area: **{{RESULT_BLACKOUT_LOST_MW}} MW** lost,
+total — islands the whole load area: **{{RESULT_BLACKOUT_LOST_MW}} MW** lost
+out of {{CONFIG_GRID_LOAD_MW}} MW of connected load,
 **{{RESULT_BLACKOUT_FRACTION}}** of system load. This is the saboteur's force
 multiplier: a single well-placed cut cascades into a regional blackout,
 crippling the pumped corridor's pumping stations and the hijacked sub's
@@ -83,8 +86,9 @@ The Stockholm-syndrome model's final state
 ($S$ = {{RESULT_SYNDROME_FINAL}}) feeds the bargaining layer: it lifts the
 captor's patience, raising the captor's equilibrium claim to
 **{{RESULT_NEG_CAPTOR_SHARE}}** of the pie — a **{{RESULT_NEG_CAPTOR_LEVERAGE}}**
-increase over the no-syndrome baseline of 0.198. Under the symmetric concession
-schedule the captor and negotiator
+increase over the no-syndrome baseline of **{{RESULT_NEG_BASELINE_SHARE}}**
+(the equilibrium share at the captor's un-boosted patience). Under the
+symmetric concession schedule the captor and negotiator
 still close the deal at parity by day **{{RESULT_NEG_SETTLEMENT_DAY}}**
 (split **{{RESULT_NEG_SETTLEMENT_SPLIT}}**), but the syndrome has quietly
 raised the captor's *reservation value* — and past a patience threshold the

@@ -8,10 +8,12 @@ computed by the corresponding code path.
 
 **Network.** A crude pipeline is a capacitated directed graph
 $G=(V,E)$ with origin $s$ (pump station), terminal $t$ (port), and segment
-capacities $c_e$ (kbbl/day). The canonical ELEKTRA dataset is a 17-node /
-16-edge simplex of the film's Caspian corridor: a twelve-segment mainline from
-`PUMP0` to `TERM` plus four spurs, with segment `J4->J5` deliberately
-under-capacity (the physical constriction the analysis must surface).
+capacities $c_e$ (kbbl/day). The canonical ELEKTRA dataset is a
+{{CONFIG_PIPELINE_NODES}}-node / {{CONFIG_PIPELINE_SEGMENTS}}-segment simplex
+of the film's Caspian corridor: a mainline from the origin pump station
+`PUMP0` to the terminal `TERM` plus a set of junction spurs, with segment
+`J4->J5` deliberately under-capacity (the physical constriction the analysis
+must surface).
 
 **Maximum flow / minimum cut.** The Edmonds–Karp algorithm repeatedly finds a
 shortest (fewest-edge) augmenting path in the residual network and pushes its
@@ -23,7 +25,9 @@ source-reachable set of the final residual network:
 $$v(f^*) = c(\delta(S^*)) = \min_{\text{cuts}} c(\delta(S)).$$
 
 **Choke points.** A segment is a *choke point* when it is load-bearing and
-running at $\ge 90\%$ of its rated capacity: $u_e = f^*/c_e \ge 0.9$, where
+running at or above {{CONFIG_CHOKE_UTILIZATION}}% of its rated capacity
+($u_e = f^*/c_e$ against the threshold constant
+`pipeline_security.CHOKE_UTILIZATION_THRESHOLD`), where
 $f^*$ is the max-flow carried along the (unique) flow path. This isolates the
 constriction a cut or a tamper event can exploit with maximum throughput loss.
 We also report Brandes edge-betweenness centrality [@brandes], the fraction of
@@ -52,8 +56,8 @@ where $DT$ is the detection threshold and $\sigma$ the operator variability.
 
 **Risk field.** Combining ${{CONFIG_SUB_SENSORS}}$ sensors by the independent
 rule $R = 1-\prod_i(1-P_{d,i})$ over a ${{CONFIG_SUB_GRID}}\times{{CONFIG_SUB_GRID}}$
-grid (3 km cells) yields the detection-probability field the submarine must
-minimize exposure over.
+grid ({{CONFIG_SUB_STEP_KM}} km cells) yields the detection-probability field
+the submarine must minimize exposure over.
 
 **Evasion routing.** Dijkstra's algorithm finds the least-cumulative-exposure
 path from origin to goal on the 4-connected grid, with per-step cost equal to
@@ -92,42 +96,46 @@ conditions catalogued in the clinical and forensic literature
 **DC power flow.** The power system is a graph of ${{CONFIG_GRID_BUSES}}$ buses
 joined by ${{CONFIG_GRID_LINES}}$ lines with susceptances $b_{ij}$ and thermal
 limits $c_{ij}$ (MW). With a slack bus fixing the angle reference and bus
-susceptance matrix $B$, the linearized load flow solves $B'\\theta' = P'$ (slack
+susceptance matrix $B$, the linearized load flow solves $B'\theta' = P'$ (slack
 row/column removed) and the line flow is
-$F_{ij} = b_{ij}(\\theta_i - \\theta_j)$ [@stott]. Only the
+$F_{ij} = b_{ij}(\theta_i - \theta_j)$ [@stott]. Only the
 slack-connected *live* component is solved: islanded buses carry no power and
-their load is unserved.
+their load is unserved. The slack bus is by construction a member of its own
+live component, so no separate "slack islanded" case arises.
 
 **Cascading failure.** A deterministic outage cascade follows the OPA blackout
 paradigm [@dobson_op]: an initial line outage reroutes power; the most
 overloaded surviving line (largest $|F_{ij}|/c_{ij}$ ratio) trips; the system
 re-solves; the process repeats until no line exceeds its rating. The blackout
 is the load islanded from the slack bus. The canonical dataset is a two-area
-corridor joined by a strong interconnector
-(`{{CONFIG_GRID_INITIAL_OUTAGE}}`, 400 MW) and a weak tie (150 MW): under
-intact operation both share the Area-B transfer and stay within limits, but
-cutting the strong tie forces the whole transfer onto the weak tie, which
-overloads, trips, and islands the entire load area.
+corridor carrying {{CONFIG_GRID_LOAD_MW}} MW of total load, joined by a strong
+interconnector (`{{CONFIG_GRID_INITIAL_OUTAGE}}`,
+{{CONFIG_GRID_STRONG_TIE_MW}} MW) and a weak tie
+(`{{CONFIG_GRID_WEAK_TIE}}`, {{CONFIG_GRID_WEAK_TIE_MW}} MW): under intact
+operation both share the Area-B transfer and stay within limits, but cutting
+the strong tie forces the whole transfer onto the weak tie, which overloads,
+trips, and islands the entire load area.
 
 ## 2.5 Hostage negotiation: bargaining under syndrome-driven patience
 
 **Rubinstein equilibrium.** In the alternating-offer bargaining game with
-discount factors $\\delta_c$ (captor) and $\\delta_n$ (negotiator) and the captor
+discount factors $\delta_c$ (captor) and $\delta_n$ (negotiator) and the captor
 proposing first, the subgame-perfect equilibrium gives the captor
-$x_c = (1-\\delta_n)/(1-\\delta_c\\,\\delta_n)$ of the pie [@rubinstein]; a more
+$x_c = (1-\delta_n)/(1-\delta_c\,\delta_n)$ of the pie [@rubinstein]; a more
 patient party captures more.
 
 **Syndrome feedback.** The Stockholm-syndrome state feeds the captor's
 patience: as identification grows, the captor values the relationship more and
-becomes more patient, so $\\delta_c = \\mathrm{clamp}(\\delta_c^0 + g\\,S)$.
+becomes more patient, so $\delta_c = \mathrm{clamp}(\delta_c^0 + g\,S)$.
 Beyond a threshold the equilibrium shares become disjoint
 ($x_c > 1 - x_c$) and the negotiation *stalemates*.
 
 **Concession dynamics.** Over a {{CONFIG_NEG_DEADLINE_DAYS}}-day horizon the
 captor's demand concedes from its opening toward $x_c$ and the negotiator's
-offer rises toward $1-x_c$, both at rate $r$. Settlement is the first day the
-offer meets the demand; if the crossing falls after the deadline, the deal
-lapses.
+offer rises toward $1-x_c$, both at rate $r = {{CONFIG_NEG_CONCESSION_RATE}}$
+per day. Settlement is the first day the offer meets the demand; if either
+side reaches its equilibrium floor first, the crossing occurs at that floor,
+and if the crossing falls after the deadline the deal lapses.
 
 ## 2.6 Sensor fusion: Kalman tracking of the hijacked submarine
 
@@ -135,8 +143,8 @@ The stolen *King William* is tracked through the patrol box from {{CONFIG_FUSION
 noisy position fixes (fused contacts, measurement std
 {{CONFIG_FUSION_MEASUREMENT_NOISE}}). A constant-velocity linear Kalman filter
 [@kalman] alternates **predict** and **update** steps:
-$$\hat{x}_{k|k-1} = F\\hat{x}_{k-1},\\quad P_{k|k-1} = FP_{k-1}F^T+Q,$$
-$$K = P H^T (H P H^T + R)^{-1},\\quad \\hat{x}_k = \\hat{x}_{k|k-1} + K(z_k - H\\hat{x}_{k|k-1}).$$
+$$\hat{x}_{k|k-1} = F\hat{x}_{k-1},\quad P_{k|k-1} = FP_{k-1}F^T+Q,$$
+$$K = P H^T (H P H^T + R)^{-1},\quad \hat{x}_k = \hat{x}_{k|k-1} + K(z_k - H\hat{x}_{k|k-1}).$$
 Measurement noise is drawn from a fixed-seed generator, so the track is
 byte-reproducible. The filter's position RMSE is compared against the
 raw-measurement RMSE to quantify the gain of fusion. (Bearing-only tracking

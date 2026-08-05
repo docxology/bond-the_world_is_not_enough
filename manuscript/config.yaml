@@ -5,7 +5,7 @@
 
 paper:
   title: "The World Is Not Enough: ELEKTRA — Special-Agent Mission Software"
-  subtitle: "Oil-Pipeline Choke-Point Security, Nuclear-Submarine Evasion, and Hostage-Psychology Influence Modeling"
+  subtitle: "Six Deterministic Pillars — Oil-Pipeline Choke-Point Security, Cascading-Blackout Energy Infrastructure, Nuclear-Submarine Evasion and Kalman Tracking, Hostage-Psychology Influence, and Bargaining Under Syndrome-Driven Patience"
   version: "0.1.0"
   date: "2026-08-04"
 
@@ -30,6 +30,13 @@ keywords:
   - "hostage psychology"
   - "Stockholm syndrome"
   - "ODE modeling"
+  - "DC power flow"
+  - "cascading failure"
+  - "blackout modeling"
+  - "Rubinstein bargaining"
+  - "hostage negotiation"
+  - "Kalman filter"
+  - "sensor fusion"
   - "deterministic simulation"
 
 metadata:

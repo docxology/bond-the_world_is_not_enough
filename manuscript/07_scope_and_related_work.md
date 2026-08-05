@@ -13,7 +13,7 @@ deliberate:
 - **Sonar model.** A simplified passive equation (spherical spreading plus
   absorption) with a normal-operator curve. It omits multipath, bottom/
   surface interaction, own-ship noise masking, and frequency-dependent
-  attenuation, and the evacuation grid is a 4-connected lattice rather than a
+  attenuation, and the evasion grid is a 4-connected lattice rather than a
   continuous field.
 - **Hostage model.** A phenomenological, bounded ODE system whose parameters
   encode the qualitative conditions catalogued in the literature. It is

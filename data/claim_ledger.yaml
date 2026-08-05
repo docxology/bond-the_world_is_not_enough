@@ -2,17 +2,23 @@
 # Registers sourced/computed numeric claims for evidence validation.
 # All RESULT_* claims are computed by the domain models deterministically
 # (seed 1999); provenance is auditable via output/data/elektra_mission.json.
+#
+# ENFORCED: tests/test_claim_ledger.py asserts that every `value` below equals
+# the live value of its `evidence` token from manuscript_variables.generate_
+# variables(), and that every `source` path exists. A stale entry fails the
+# suite rather than drifting silently. `value` is therefore written in the
+# token's own units and formatting (see `unit`).
 
 claims:
   - id: "elektra.max_flow"
     claim: "maximum deliverable pipeline flow"
-    value: "420"
+    value: "420.000"
     unit: "kbbl/day"
     source: "src/the_world_is_not_enough/pipeline_security.py::edmonds_karp(default_pipeline())"
     evidence: "RESULT_MAX_FLOW"
   - id: "elektra.min_cut_capacity"
     claim: "minimum s-t cut capacity (== max flow)"
-    value: "420"
+    value: "420.000"
     unit: "kbbl/day"
     source: "src/the_world_is_not_enough/pipeline_security.py::min_cut_edges"
     evidence: "RESULT_MIN_CUT_CAPACITY"
@@ -24,25 +30,25 @@ claims:
     evidence: "RESULT_CHOKE_POINT_COUNT"
   - id: "elektra.exposure_reduction"
     claim: "relative reduction in cumulative detection exposure from least-risk routing"
-    value: "0.249"
-    unit: "fraction"
+    value: "24.861"
+    unit: "percent"
     source: "src/the_world_is_not_enough/sub_defense.py::evasion_analysis"
     evidence: "RESULT_EXPOSURE_REDUCTION"
   - id: "elektra.syndrome_onset_day"
     claim: "day the syndrome index first crosses the onset threshold"
-    value: "11.25"
+    value: "11.250"
     unit: "days"
     source: "src/the_world_is_not_enough/hostage_psychology.py::integrate_dynamics"
     evidence: "RESULT_SYNDROME_ONSET_DAY"
   - id: "elektra.blackout_lost_load"
     claim: "load islanded by the strong-interconnector outage cascade"
-    value: "220"
+    value: "220.000"
     unit: "MW"
     source: "src/the_world_is_not_enough/power_grid.py::cascade_failure(default_power_grid(), '3->5')"
     evidence: "RESULT_BLACKOUT_LOST_MW"
   - id: "elektra.blackout_fraction"
     claim: "fraction of total system load lost to the cascade"
-    value: "0.44"
+    value: "0.440"
     unit: "fraction"
     source: "src/the_world_is_not_enough/power_grid.py::cascade_failure"
     evidence: "RESULT_BLACKOUT_FRACTION"

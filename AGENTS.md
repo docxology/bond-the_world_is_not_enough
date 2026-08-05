@@ -55,19 +55,49 @@ Gadgets (`pipeline_analysis`, `tamper_simulation`, `evasion_analysis`,
 `submarine_tracking`, `mission_input_hash`) are registered at import in the
 module-level `GADGETS` registry for the orchestrator to discover.
 
-## Verification checklist
+## Build / test / verify
+
+Setup once (`bond-api` and `bond-utilities` resolve as local path
+dependencies from the same suite tree):
+
+```bash
+uv sync --extra dev
+```
+
+Run the mission, the figures, and the manuscript hydration:
+
+```bash
+uv run python scripts/brief.py      # also recon.py / plan.py / execute.py / debrief.py
+uv run python scripts/generate_figures.py
+uv run python scripts/z_generate_manuscript_variables.py
+```
+
+Full verification — all five must pass before a commit lands:
 
 ```bash
 uv run pytest tests/ --cov=src --cov-fail-under=90
-uv run ruff check src/ scripts/ tests/ && uv run ruff format src/ scripts/ tests/
+uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
 uv run mypy src/ scripts/
+uv run python scripts/z_generate_manuscript_variables.py   # strict token gate
 rg -n "template[_]code_project" . --glob '!uv.lock' --glob '!.git/**' || echo clean
 git status --short   # clean after commit
 ```
 
+`uv` cannot write its cache under a restrictive sandbox. A
+`Failed to initialize cache` error is an environment restriction, not a
+package failure — re-run with the sandbox disabled.
+
+Measured counts (tests, coverage, tokens, steps) live in
+[`docs/_generated/COUNTS.md`](docs/_generated/COUNTS.md) and are regenerated
+from a real run, never hand-edited.
+
 ## See also
 
-- `docs/agent_instructions.md` — operational constraints
-- `docs/architecture.md` — layer boundaries
-- `docs/testing_philosophy.md` — zero-mock testing approach
+- `docs/agent_instructions.md` — operational constraints (read before editing)
+- `docs/architecture.md` — module-by-module architecture and the frozen
+  `MissionProvider` surface
+- `docs/testing_philosophy.md` — zero-mock doctrine and what a real assertion
+  looks like here
+- `docs/_generated/COUNTS.md` — measured counts
 - `manuscript/config.yaml` — the deterministic experiment block
+- `TODO.md` — remaining work

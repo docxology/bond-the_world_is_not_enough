@@ -2,8 +2,11 @@
 
 In *The World Is Not Enough* (1999), mission codename **ELEKTRA**, we develop
 deterministic special-agent mission software across six operational pillars.
-Three were established earlier; three deepen the package into energy
-infrastructure and hostage-negotiation strategy.
+Three model the film's primary threats — pipeline sabotage, submarine evasion,
+and hostage psychology — and three couple to them: an energy-infrastructure
+model that supplies the sabotage force multiplier, a bargaining model that
+consumes the syndrome state, and a tracking filter that re-acquires the evading
+hull.
 
 1. **Oil-pipeline security** — a capacitated flow model of a Caspian crude
    trunk is analysed with the Edmonds–Karp max-flow/min-cut algorithm and

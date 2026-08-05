@@ -25,8 +25,24 @@ drawn from the film:
    the hijacked submarine from noisy position fixes, cutting position RMSE
    well below the raw-measurement level.
 
+The pillars are not six unrelated exercises. The grid model supplies the
+sabotage force multiplier behind the pipeline pillar, the bargaining model
+consumes the syndrome state produced by the psychology model, and the Kalman
+filter re-acquires the hull that the evasion router hid.
+
 All results are real, deterministic model outputs produced under a single fixed
 seed (`1999`); no metric in the manuscript is hand-authored.
+
+## Film → software mapping
+
+| In the film | In this package |
+| --- | --- |
+| Elektra King's Caspian pipeline is targeted for sabotage | `pipeline_security` — where a cut costs the most throughput |
+| A single cut cripples the corridor and the city behind it | `power_grid` — the cascade that turns one outage into a regional blackout |
+| The nuclear submarine *King William* is hijacked and hides | `sub_defense` — the acoustic field and the least-exposure route through it |
+| The hull must be re-found before the weapon is used | `sensor_fusion` — the Kalman track that makes an intercept solvable |
+| A captor manipulates a hostage's judgment | `hostage_psychology` — when the emotional bond forms, and how strongly |
+| That bond changes what the captor will accept | `negotiation_tactics` — the syndrome moving the reservation value |
 
 ## Features
 
@@ -38,9 +54,11 @@ seed (`1999`); no metric in the manuscript is hand-authored.
 - Thin per-phase CLIs (`scripts/brief.py` … `scripts/debrief.py`) emitting
   canonical BOND-API JSON, plus figure and manuscript-variable scripts.
 - Four deterministic concept figures and a token-hydrated manuscript
-  (metrics flow through `manuscript_variables.py`, never authored).
-- Shared provenance persistence via `bond_utilities.mission_io`.
-  `record_provenance_outcome` (deterministic mission epoch).
+  (metrics flow through `manuscript_variables.py`, never authored) with a
+  strict resolver that refuses to render an unresolved or non-finite token.
+- Shared provenance persistence via
+  `bond_utilities.mission_io.record_provenance_outcome` (deterministic mission
+  epoch).
 - ≥90% line+branch coverage on `src/`, zero mocks, ruff + mypy clean.
 
 ## Setup
@@ -80,29 +98,59 @@ print(provider.brief())
 
 ## Package structure
 
+Every module in `src/the_world_is_not_enough/`, one line each:
+
+| Module | Computes |
+| --- | --- |
+| `pipeline_security.py` | Capacitated flow network of the Caspian trunk: Edmonds–Karp max flow, min-cut recovery, Brandes edge-betweenness, utilization, sensor coverage, and a seeded discrete-event tamper simulation. Pure. |
+| `sub_defense.py` | Passive-sonar equation and normal-CDF detection link, the combined risk field, Dijkstra least-exposure evasion routing against a line-of-sight baseline, and bearing triangulation. Pure. |
+| `hostage_psychology.py` | Four-state bounded Stockholm-syndrome ODE (fear, gratitude, identification, decaying threat) integrated with fixed-step RK4; onset day, peak, final syndrome, influence ratio. Pure. |
+| `power_grid.py` | Linearized DC load flow over a two-area corridor and a deterministic sequential cascading-failure blackout; lost load and blackout fraction. Pure. |
+| `negotiation_tactics.py` | Rubinstein alternating-offer equilibrium, the syndrome→captor-patience mapping, and a concession model resolving to settlement, deadline lapse, or stalemate. Pure. |
+| `sensor_fusion.py` | Constant-velocity linear Kalman filter over seeded noisy position fixes; RMSE against the raw-measurement baseline, final error, convergence. Pure. |
+| `figures.py` | The four deterministic concept figures, rendered headless (`Agg`), no timestamps. |
+| `manuscript_variables.py` | `{{TOKEN}}` hydration: reads `manuscript/config.yaml`, runs the models, formats `CONFIG_*` and `RESULT_*` tokens, and refuses blank or non-finite values. |
+| `mission.py` | The BOND-API adapter — `MissionProvider` plus the `GADGETS` registry. The only module importing `bond_api`. |
+
 ```
-src/the_world_is_not_enough/
-  pipeline_security.py    # flow network, choke points, tamper sim (pure)
-  sub_defense.py          # sonar equation, evasion routing, triangulation (pure)
-  hostage_psychology.py   # Stockholm-syndrome ODE model, RK4 (pure)
-  power_grid.py           # DC power flow, cascading-failure blackout (pure)
-  negotiation_tactics.py  # Rubinstein bargaining + syndrome-driven patience (pure)
-  sensor_fusion.py        # linear Kalman tracking of the hijacked sub (pure)
-  figures.py              # 4 deterministic concept figures
-  manuscript_variables.py # {{TOKEN}} hydration from config + measured outputs
-  mission.py              # MissionProvider adapter + gadget registry
-scripts/                  # thin per-phase CLIs
-tests/                    # zero-mock real-data tests
-manuscript/               # token-hydrated manuscript + config.yaml
+scripts/     # thin per-phase CLIs + figure and token generators
+tests/       # zero-mock real-data tests, one module per pillar
+manuscript/  # token-hydrated manuscript + config.yaml (the experiment block)
+docs/        # architecture, testing philosophy, agent instructions
 ```
+
+## MissionProvider surface
+
+`src/the_world_is_not_enough/mission.py` exposes the **frozen** `bond_api`
+protocol. `bond-cli`, the coordinator reconcile, and the orchestrator consume
+this shape across every package in the suite, so it does not change:
+
+| Member | Shape |
+| --- | --- |
+| `MissionProvider.brief()` | → `MissionBrief` (codename `ELEKTRA`, 4 objectives, 6 assets, 3 constraints) |
+| `MissionProvider.recon(request)` | → `ReconReport` (goal + one measured finding per pillar) |
+| `MissionProvider.plan(brief)` | → `MissionPlan` (8 steps, one or two per pillar) |
+| `MissionProvider.execute(plan)` | → `MissionOutcome` (measured results + `Provenance(seed=1999, wall_time_s=0.0, input_hash)`) |
+| `MissionProvider.debrief(outcome)` | → `Debrief` (6 lessons derived from the measured outcome) |
+| `GADGETS` | module-level `GadgetRegistry` with 8 callables under the film slug |
+| `mission_input_hash(plan)` | stable SHA-256 over the canonical plan form |
+
+Depth is added inside the package — more steps, more result keys, more
+gadgets — never as a protocol change.
 
 ## Testing
 
 ```bash
 uv run pytest tests/ --cov=src --cov-fail-under=90
-uv run ruff check src/ scripts/ tests/
+uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/
 uv run mypy src/ scripts/
 ```
+
+The enforced floor is **90% line + branch on `src/`**, with zero mocks and
+zero skips. The achieved figure and live test count are recorded in
+[`docs/_generated/COUNTS.md`](docs/_generated/COUNTS.md), regenerated from a
+real run — this README deliberately does not quote a percentage that would go
+stale.
 
 ## The BOND suite
 

@@ -4,9 +4,13 @@ The ELEKTRA package is deterministic by construction.
 
 ## Determinism guarantees
 
-- **Fixed seed.** All random draws — the tamper-event simulation — use a single
-  fixed seed (`{{CONFIG_SEED}}`, the film's release year) via Python's
-  `random.Random`, so the simulation is byte-reproducible.
+- **Fixed seed.** The package has exactly two stochastic steps and both are
+  seeded from the same value (`{{CONFIG_SEED}}`, the film's release year): the
+  tamper-event simulation draws from Python's `random.Random`, and the
+  sensor-fusion measurement noise from `numpy.random.default_rng`. Every other
+  model — max-flow/min-cut, betweenness, the sonar field, Dijkstra routing, the
+  RK4 integration, the DC load flow and its cascade, and the bargaining
+  equilibrium — makes no random draws at all. Runs are byte-reproducible.
 - **No wall-clock in results.** The mission outcome's `Provenance.wall_time_s`
   is always `0.0`; persisted provenance records use a fixed nominal mission
   epoch. `GENERATION_TIMESTAMP` is the only time-valued token and is overridable
@@ -35,7 +39,10 @@ uv run pytest tests/ --cov=src --cov-fail-under=90
 
 A live cross-reference test (`tests/test_manuscript_variables.py`) enforces that
 every token used in a numbered manuscript section is actually generated, so the
-prose can never present a stale or fabricated metric.
+prose can never present a stale or fabricated metric. Hydration additionally
+runs a measurability gate (`_assert_measurable`) that rejects any blank or
+non-finite result token, so a degenerate model run fails the build instead of
+rendering `nan` as a measured value.
 
 ## Artifact inventory
 

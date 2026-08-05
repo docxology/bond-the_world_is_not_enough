@@ -6,7 +6,7 @@ The domain core and protocol adapter, organized in dependency order.
 
 | Module | Layer | Responsibility |
 | --- | --- | --- |
-| `pipeline_security.py` | pure core | Flow network (17-node Caspian trunk), Edmonds–Karp max-flow/min-cut, Brandes betweenness, capacity utilization, sensor coverage, deterministic tamper simulation, `analyze_choke_points` |
+| `pipeline_security.py` | pure core | Flow network (the Caspian trunk dataset), Edmonds–Karp max-flow/min-cut, Brandes betweenness, capacity utilization, sensor coverage, deterministic tamper simulation, `analyze_choke_points` |
 | `sub_defense.py` | pure core | Passive-sonar equation + normal-CDF detection link, risk map, Dijkstra least-risk evasion, bearing triangulation |
 | `hostage_psychology.py` | pure core | Four-state Stockholm-syndrome ODE (fear/gratitude/identification/threat) with fixed-step RK4, onset/peak/final + influence metrics |
 | `power_grid.py` | pure core | DC power flow (susceptance solve) and deterministic cascading-failure blackout over a two-area corridor |

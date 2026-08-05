@@ -207,8 +207,9 @@ def track_rmse(
 ) -> float:
     """Root-mean-square position error between a track and the truth.
 
-    ``filtered`` may be a list of :class:`FilterStep` or an ``(n, 4)`` array
-    of state vectors (used for the raw-measurement baseline).
+    ``filtered`` may be a list of :class:`FilterStep`, or an array whose first
+    two columns are the ``(x, y)`` position — an ``(n, 2)`` measurement
+    sequence (the raw no-fusion baseline) or an ``(n, 4)`` state history.
     """
     n = truth.shape[0]
     if n == 0:

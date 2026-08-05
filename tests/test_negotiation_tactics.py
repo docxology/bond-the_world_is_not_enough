@@ -157,3 +157,56 @@ class TestSettlementAnalysis:
         a = N.settlement_analysis(syndrome=0.532)
         b = N.settlement_analysis(syndrome=0.532)
         assert a == b
+
+
+class TestSettlementFloorBranches:
+    """Both floor-binding settlement branches, not just the symmetric midpoint.
+
+    When one side reaches its equilibrium share before the two schedules would
+    cross at their midpoint, the crossing happens *at that floor* instead. Both
+    orientations are reachable and are asserted against the closed form.
+    """
+
+    def test_captor_floor_binds_first(self) -> None:
+        # The captor opens close to its equilibrium share, so its demand hits
+        # the floor long before the midpoint crossing: settlement is at x_c.
+        params = N.NegotiationParams(
+            initial_demand=0.35,
+            initial_offer=0.10,
+            concession_rate=0.08,
+            deadline_days=30.0,
+        )
+        outcome = N.settlement_analysis(params, captor_discount=0.7)
+        captor_share = float(outcome["captor_share"])
+        assert outcome["reached"] is True
+        assert outcome["reason"] == "settled"
+        assert captor_share < float(outcome["negotiator_share"])
+        # the midpoint crossing would have been later than the captor's floor
+        midpoint_day = (0.35 - 0.10) / (2 * 0.08)
+        floor_day = (0.35 - captor_share) / 0.08
+        assert floor_day < midpoint_day
+        assert outcome["settlement_split"] == pytest.approx(captor_share)
+        assert outcome["settlement_day"] == pytest.approx(
+            (captor_share - 0.10) / 0.08, abs=1e-9
+        )
+
+    def test_negotiator_ceiling_binds_first(self) -> None:
+        # The negotiator opens close to its own equilibrium share, so its offer
+        # hits the ceiling first: settlement is at 1 - x_c.
+        params = N.NegotiationParams(
+            initial_demand=0.90,
+            initial_offer=0.45,
+            concession_rate=0.08,
+            deadline_days=30.0,
+        )
+        outcome = N.settlement_analysis(params, captor_discount=0.888888888888889)
+        negotiator_share = float(outcome["negotiator_share"])
+        assert outcome["reached"] is True
+        assert outcome["settlement_split"] == pytest.approx(negotiator_share)
+        assert outcome["settlement_day"] == pytest.approx(
+            (0.90 - negotiator_share) / 0.08, abs=1e-9
+        )
+
+    def test_negative_discount_gain_rejected(self) -> None:
+        with pytest.raises(ValueError, match="captor_discount_gain"):
+            N.NegotiationParams(captor_discount_gain=-0.1)

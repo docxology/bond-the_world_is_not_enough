@@ -332,7 +332,12 @@ class MissionProvider:
             assets=_summary_assets(),
             constraints=(
                 Constraint(
-                    kind="determinism", detail=f"fixed seed {SEED}; no random draws"
+                    kind="determinism",
+                    detail=(
+                        f"fixed seed {SEED}; the only stochastic steps (tamper "
+                        "simulation, fusion measurement noise) draw from seeded "
+                        "generators, so every run is byte-reproducible"
+                    ),
                 ),
                 Constraint(
                     kind="isolation", detail="domain cores importable without bond_api"
@@ -473,10 +478,9 @@ class MissionProvider:
             ),
             (
                 f"taking the {_GRID_OUTAGE} interconnector blacked "
-                f"{r['blackout_lost_load_mw']:.0f} MW ({r['blackout_fraction'] * 100.0:.1f}% "
-                "of load) via a {steps}-line cascade".format(
-                    steps=r["blackout_lines_tripped"]
-                )
+                f"{r['blackout_lost_load_mw']:.0f} MW "
+                f"({r['blackout_fraction'] * 100.0:.1f}% of load) via a "
+                f"{r['blackout_lines_tripped']}-line cascade"
             ),
             (
                 f"hostage identification reached S={r['syndrome_final']:.2f}, lifting the "

@@ -4,7 +4,7 @@ Small declarative data overlays.
 
 | File | Purpose |
 | --- | --- |
-| `claim_ledger.yaml` | Registers sourced/computed numeric claims for evidence validation |
+| `claim_ledger.yaml` | Registers computed numeric claims; **enforced** by `tests/test_claim_ledger.py`, which asserts each recorded value equals the live value of the token it cites |
 | `README.md`, `AGENTS.md` | This directory |
 
 The heavier mission datasets (pipeline topology, sensor positions) live as

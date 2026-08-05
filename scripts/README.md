@@ -11,7 +11,7 @@ figure/token generators, and print canonical output.
 | `plan.py` | Print the `MissionPlan` JSON |
 | `execute.py` | Execute the mission, print `MissionOutcome` JSON, persist provenance |
 | `debrief.py` | Print the `Debrief` (outcome + lessons) JSON |
-| `generate_figures.py` | Render the three deterministic concept figures |
+| `generate_figures.py` | Render the four deterministic concept figures |
 | `z_generate_manuscript_variables.py` | Hydrate manuscript `{{TOKEN}}`s (strict by default; `--allow-draft` relaxes) |
 
 ## Conventions

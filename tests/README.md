@@ -13,6 +13,7 @@ Zero-mock test suite.
 | `test_mission.py` | protocol conformance, full mission (8 steps), provenance, gadgets, discovery, serialization |
 | `test_figures.py` | deterministic figure generation (4 figures, headless) |
 | `test_manuscript_variables.py` | token hydration + live manuscript cross-reference |
+| `test_claim_ledger.py` | binds `data/claim_ledger.yaml` entries to live token values |
 | `test_scripts_smoke.py` | real subprocess phase CLIs and artifact scripts |
 
 See `PATTERNS.md` for shared patterns and `../docs/testing_philosophy.md` for
