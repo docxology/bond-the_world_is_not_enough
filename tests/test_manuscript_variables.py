@@ -61,6 +61,10 @@ class TestGenerateVariables:
         assert variables["RESULT_TOP_CHOKE_POINT"] == "J4->J5"
         assert variables["RESULT_EXPOSURE_REDUCTION"] == "24.861"
         assert variables["RESULT_SYNDROME_ONSET_DAY"] == "11.250"
+        assert variables["RESULT_BLACKOUT_LOST_MW"] == "220.000"
+        assert variables["CONFIG_GRID_BUSES"] == "8"
+        assert variables["RESULT_NEG_SETTLEMENT_DAY"] == "5.625"
+        assert variables["RESULT_TRACK_MEASUREMENT_RMSE"] == "2.912"
 
     def test_all_values_strings(self) -> None:
         variables = MV.generate_variables()

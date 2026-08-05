@@ -21,7 +21,14 @@ from typing import Any, cast
 
 import yaml
 
-from the_world_is_not_enough import hostage_psychology, pipeline_security, sub_defense
+from the_world_is_not_enough import (
+    hostage_psychology,
+    negotiation_tactics,
+    pipeline_security,
+    power_grid,
+    sensor_fusion,
+    sub_defense,
+)
 
 __all__ = ["generate_variables", "load_manuscript_config", "resolve_manuscript_tree"]
 
@@ -111,6 +118,43 @@ def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
         onset_threshold=float(hostage_cfg.get("onset_threshold", 0.5)),
     )
 
+    # --- power-grid pillar (cascading blackout) ---
+    power_cfg = experiment.get("power_grid", {}) or {}
+    grid = power_grid.default_power_grid()
+    outage = str(power_cfg.get("initial_outage", "3->5"))
+    overload_factor = float(power_cfg.get("overload_factor", 1.0))
+    blackout = power_grid.cascade_failure(grid, outage, overload_factor=overload_factor)
+
+    # --- negotiation pillar (hostage syndrome drives the captor's patience) ---
+    neg_cfg = experiment.get("negotiation", {}) or {}
+    negotiation = negotiation_tactics.NegotiationParams(
+        deadline_days=float(neg_cfg.get("deadline_days", 10.0)),
+        negotiator_discount=float(neg_cfg.get("negotiator_discount", 0.90)),
+        concession_rate=float(neg_cfg.get("concession_rate", 0.08)),
+    )
+    settlement = cast(
+        "dict[str, Any]",
+        negotiation_tactics.settlement_analysis(
+            negotiation, syndrome=float(dynamics.final_syndrome)
+        ),
+    )
+    baseline = negotiation_tactics.equilibrium_shares(
+        negotiation.captor_discount_base, negotiation.negotiator_discount
+    )[0]
+    captor_share = float(settlement["captor_share"])
+    leverage = (captor_share - baseline) / baseline if baseline > 0 else 0.0
+
+    # --- sensor-fusion pillar (Kalman track of the hijacked submarine) ---
+    fusion_cfg = experiment.get("fusion", {}) or {}
+    tracking = sensor_fusion.TrackConfig(
+        dt=float(fusion_cfg.get("dt", 1.0)),
+        steps=int(fusion_cfg.get("steps", 20)),
+        process_noise=float(fusion_cfg.get("process_noise", 0.1)),
+        measurement_noise=float(fusion_cfg.get("measurement_noise", 2.0)),
+        seed=int(fusion_cfg.get("seed", seed)),
+    )
+    fusion = sensor_fusion.run_tracking(tracking)
+
     sensor_count = len(sensors)
     return {
         "RESULT_MAX_FLOW": _fmt(float(analysis["max_flow_kbpd"])),
@@ -133,6 +177,26 @@ def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
             else "not reached"
         ),
         "RESULT_INFLUENCE_RATIO": _fmt(float(dynamics.influence_ratio)),
+        "RESULT_BLACKOUT_STEPS": str(int(blackout["steps"])),
+        "RESULT_BLACKOUT_LINES_TRIPPED": str(len(blackout["tripped"])),
+        "RESULT_BLACKOUT_LOST_MW": _fmt(float(blackout["lost_load_mw"])),
+        "RESULT_BLACKOUT_FRACTION": _fmt(float(blackout["blackout_fraction"])),
+        "RESULT_NEG_SETTLEMENT_DAY": (
+            _fmt(float(settlement["settlement_day"]))
+            if settlement["settlement_day"] is not None
+            else "not reached"
+        ),
+        "RESULT_NEG_SETTLEMENT_SPLIT": (
+            _fmt(float(settlement["settlement_split"]))
+            if settlement["settlement_split"] is not None
+            else "none"
+        ),
+        "RESULT_NEG_CAPTOR_SHARE": _fmt(captor_share),
+        "RESULT_NEG_CAPTOR_LEVERAGE": _fmt(leverage),
+        "RESULT_TRACK_RMSE": _fmt(float(fusion["filter_rmse"])),
+        "RESULT_TRACK_MEASUREMENT_RMSE": _fmt(float(fusion["measurement_rmse"])),
+        "RESULT_TRACK_FINAL_ERROR": _fmt(float(fusion["final_position_error"])),
+        "RESULT_TRACK_GAIN": _fmt(float(fusion["filter_gain"]) * 100.0),
     }
 
 
@@ -189,6 +253,9 @@ def _config_tokens(config: dict[str, Any]) -> dict[str, str]:
     pipeline = experiment.get("pipeline", {}) or {}
     submarine = experiment.get("submarine", {}) or {}
     hostage = experiment.get("hostage", {}) or {}
+    power = experiment.get("power_grid", {}) or {}
+    negotiation = experiment.get("negotiation", {}) or {}
+    fusion = experiment.get("fusion", {}) or {}
     sensors = submarine.get("sensors", []) or []
     return {
         "CONFIG_SEED": str(experiment.get("seed", 1999)),
@@ -201,6 +268,19 @@ def _config_tokens(config: dict[str, Any]) -> dict[str, str]:
         "CONFIG_HOSTAGE_DAYS": _fmt(float(hostage.get("days", 30.0)), 1),
         "CONFIG_HOSTAGE_DT": _fmt(float(hostage.get("dt", 0.25))),
         "CONFIG_HOSTAGE_ONSET": _fmt(float(hostage.get("onset_threshold", 0.5))),
+        "CONFIG_GRID_BUSES": str(int(power_grid.default_power_grid().n_buses)),
+        "CONFIG_GRID_LINES": str(len(power_grid.default_power_grid().lines)),
+        "CONFIG_GRID_INITIAL_OUTAGE": str(power.get("initial_outage", "3->5")),
+        "CONFIG_NEG_DEADLINE_DAYS": _fmt(
+            float(negotiation.get("deadline_days", 10.0)), 1
+        ),
+        "CONFIG_NEG_NEGOTIATOR_DISCOUNT": _fmt(
+            float(negotiation.get("negotiator_discount", 0.90))
+        ),
+        "CONFIG_FUSION_STEPS": str(int(fusion.get("steps", 20))),
+        "CONFIG_FUSION_MEASUREMENT_NOISE": _fmt(
+            float(fusion.get("measurement_noise", 2.0))
+        ),
     }
 
 

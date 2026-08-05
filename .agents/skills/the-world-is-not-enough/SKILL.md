@@ -38,10 +38,19 @@ uv run python scripts/z_generate_manuscript_variables.py   # token hydration
   Dijkstra least-risk evasion, bearing triangulation.
 - `hostage_psychology.py` — four-state Stockholm-syndrome ODE with fixed-step
   RK4 (onset/peak/final + influence ratio).
+- `power_grid.py` — DC power flow + deterministic cascading-failure blackout
+  (energy infrastructure).
+- `negotiation_tactics.py` — Rubinstein bargaining under syndrome-driven
+  patience + deterministic concession settlement.
+- `sensor_fusion.py` — constant-velocity linear Kalman tracking of the
+  hijacked submarine.
 
 `mission.py` implements `MissionProvider` (film=`the_world_is_not_enough`,
-codename=`ELEKTRA`, seed=`1999`) and registers `GADGETS`. The pure core is
-bond-free.
+codename=`ELEKTRA`, seed=`1999`) over 8 plan steps and registers `GADGETS`
+(`pipeline_analysis`, `tamper_simulation`, `evasion_analysis`,
+`hostage_dynamics`, `power_cascade`, `negotiation_settlement`,
+`submarine_tracking`, `mission_input_hash`). The pure core is bond-free and
+the protocol surface is stable.
 
 ## Pitfalls
 

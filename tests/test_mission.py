@@ -43,10 +43,17 @@ class TestProviderConformance:
         brief = make_provider().brief()
         assert brief.film == mission.FILM
         assert brief.codename == "ELEKTRA"
-        assert len(brief.objectives) == 3
-        assert len(brief.assets) == 3
+        assert len(brief.objectives) == 4
+        assert len(brief.assets) == 6
         kinds = {asset.kind for asset in brief.assets}
-        assert kinds == {"pipeline", "submarine", "hostage"}
+        assert kinds == {
+            "pipeline",
+            "submarine",
+            "hostage",
+            "power",
+            "negotiation",
+            "fusion",
+        }
         constraint_kinds = {c.kind for c in brief.constraints}
         assert "determinism" in constraint_kinds
 
@@ -54,14 +61,22 @@ class TestProviderConformance:
         report = make_provider().recon(ReconRequest(goal="survey everything"))
         assert report.findings
         labels = {f.label for f in report.findings}
-        assert {"goal", "pipeline", "submarine", "hostage"} <= labels
+        assert {
+            "goal",
+            "pipeline",
+            "submarine",
+            "hostage",
+            "power",
+            "negotiation",
+            "fusion",
+        } <= labels
 
     def test_plan_steps(self) -> None:
         provider = make_provider()
         plan = provider.plan(provider.brief())
-        assert len(plan.steps) == 5
+        assert len(plan.steps) == 8
         assert plan.steps[0].action == "analyze_choke_points"
-        assert plan.steps[-1].action == "integrate_dynamics"
+        assert plan.steps[-1].action == "track_submarine"
 
 
 class TestExecute:
@@ -71,9 +86,12 @@ class TestExecute:
         outcome = provider.execute(plan)
         assert isinstance(outcome, MissionOutcome)
         assert outcome.success is True
-        assert outcome.results["steps_completed"] == 5
+        assert outcome.results["steps_completed"] == 8
         assert "max_flow_kbpd" in outcome.results
         assert "syndrome_final" in outcome.results
+        assert "blackout_fraction" in outcome.results
+        assert "neg_captor_share" in outcome.results
+        assert "track_filter_rmse" in outcome.results
         assert isinstance(outcome.provenance, Provenance)
 
     def test_provenance_fields(self) -> None:
@@ -110,6 +128,14 @@ class TestExecute:
         assert 0.0 < r["exposure_reduction"] < 1.0
         assert r["syndrome_final"] > 0.5
         assert r["syndrome_onset_day"] is not None
+        assert r["blackout_lost_load_mw"] == pytest.approx(220.0)
+        assert r["blackout_fraction"] == pytest.approx(0.44)
+        assert r["blackout_lines_tripped"] == 2
+        assert r["neg_reached"] is True
+        assert r["neg_settlement_day"] == pytest.approx(5.625, abs=1e-6)
+        assert 0.0 < r["neg_captor_share"] < 1.0
+        assert r["track_filter_rmse"] < r["track_measurement_rmse"]
+        assert r["track_converged"] is True
 
 
 class TestDebrief:
@@ -139,6 +165,9 @@ class TestGadgets:
             "tamper_simulation",
             "evasion_analysis",
             "hostage_dynamics",
+            "power_cascade",
+            "negotiation_settlement",
+            "submarine_tracking",
             "mission_input_hash",
         }
 

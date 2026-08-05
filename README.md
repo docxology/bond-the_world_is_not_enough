@@ -3,8 +3,8 @@
 *The World Is Not Enough* (1999) · mission codename **ELEKTRA** · a BOND suite
 film package.
 
-Deterministic special-agent mission software modeling three operational
-pillars drawn from the film:
+Deterministic special-agent mission software modeling six operational pillars
+drawn from the film:
 
 1. **Oil-pipeline security graph** — choke points and tamper interdiction.
    Edmonds–Karp max-flow/min-cut, Brandes edge-betweenness, capacity
@@ -15,6 +15,15 @@ pillars drawn from the film:
 3. **Stockholm-syndrome influence model** — hostage psychology dynamics. A
    four-state ODE system (fear, gratitude, identification, threat) integrated
    with a fixed-step RK4 scheme that reproduces the onset of the syndrome.
+4. **Energy infrastructure** — DC power flow and cascading-failure blackout.
+   A linearized load-flow solve and a deterministic outage cascade show how a
+   single interconnector cut islands a whole load area.
+5. **Hostage negotiation** — Rubinstein alternating-offer bargaining under
+   syndrome-driven patience. The syndrome raises the captor's reservation
+   value and can push the negotiation to stalemate.
+6. **Sensor fusion** — a constant-velocity linear Kalman filter that tracks
+   the hijacked submarine from noisy position fixes, cutting position RMSE
+   well below the raw-measurement level.
 
 All results are real, deterministic model outputs produced under a single fixed
 seed (`1999`); no metric in the manuscript is hand-authored.
@@ -28,7 +37,7 @@ seed (`1999`); no metric in the manuscript is hand-authored.
   domain capabilities registered in a `bond_api` `GadgetRegistry`.
 - Thin per-phase CLIs (`scripts/brief.py` … `scripts/debrief.py`) emitting
   canonical BOND-API JSON, plus figure and manuscript-variable scripts.
-- Three deterministic concept figures and a token-hydrated manuscript
+- Four deterministic concept figures and a token-hydrated manuscript
   (metrics flow through `manuscript_variables.py`, never authored).
 - Shared provenance persistence via `bond_utilities.mission_io`.
   `record_provenance_outcome` (deterministic mission epoch).
@@ -76,7 +85,10 @@ src/the_world_is_not_enough/
   pipeline_security.py    # flow network, choke points, tamper sim (pure)
   sub_defense.py          # sonar equation, evasion routing, triangulation (pure)
   hostage_psychology.py   # Stockholm-syndrome ODE model, RK4 (pure)
-  figures.py              # 3 deterministic concept figures
+  power_grid.py           # DC power flow, cascading-failure blackout (pure)
+  negotiation_tactics.py  # Rubinstein bargaining + syndrome-driven patience (pure)
+  sensor_fusion.py        # linear Kalman tracking of the hijacked sub (pure)
+  figures.py              # 4 deterministic concept figures
   manuscript_variables.py # {{TOKEN}} hydration from config + measured outputs
   mission.py              # MissionProvider adapter + gadget registry
 scripts/                  # thin per-phase CLIs

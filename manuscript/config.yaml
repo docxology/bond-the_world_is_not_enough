@@ -60,3 +60,16 @@ experiment:
     days: 30.0
     dt: 0.25
     onset_threshold: 0.5
+  power_grid:
+    initial_outage: "3->5"
+    overload_factor: 1.0
+  negotiation:
+    deadline_days: 10.0
+    negotiator_discount: 0.90
+    concession_rate: 0.08
+  fusion:
+    dt: 1.0
+    steps: 20
+    process_noise: 0.1
+    measurement_noise: 2.0
+    seed: 1999

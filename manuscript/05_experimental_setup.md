@@ -17,6 +17,13 @@ that file.
 | Hostage integration horizon (days) | `CONFIG_HOSTAGE_DAYS` | {{CONFIG_HOSTAGE_DAYS}} |
 | Hostage integration step | `CONFIG_HOSTAGE_DT` | {{CONFIG_HOSTAGE_DT}} |
 | Syndrome onset threshold | `CONFIG_HOSTAGE_ONSET` | {{CONFIG_HOSTAGE_ONSET}} |
+| Power-grid buses | `CONFIG_GRID_BUSES` | {{CONFIG_GRID_BUSES}} |
+| Power-grid lines | `CONFIG_GRID_LINES` | {{CONFIG_GRID_LINES}} |
+| Targeted interconnector | `CONFIG_GRID_INITIAL_OUTAGE` | {{CONFIG_GRID_INITIAL_OUTAGE}} |
+| Negotiation deadline (days) | `CONFIG_NEG_DEADLINE_DAYS` | {{CONFIG_NEG_DEADLINE_DAYS}} |
+| Negotiator discount | `CONFIG_NEG_NEGOTIATOR_DISCOUNT` | {{CONFIG_NEG_NEGOTIATOR_DISCOUNT}} |
+| Fusion fix count | `CONFIG_FUSION_STEPS` | {{CONFIG_FUSION_STEPS}} |
+| Fusion measurement std | `CONFIG_FUSION_MEASUREMENT_NOISE` | {{CONFIG_FUSION_MEASUREMENT_NOISE}} |
 
 ## Software environment
 

@@ -46,6 +46,7 @@ prose can never present a stale or fabricated metric.
 | Pipeline figure | `output/figures/pipeline_network.png` | yes |
 | Submarine figure | `output/figures/submarine_detection.png` | yes |
 | Hostage figure | `output/figures/hostage_dynamics.png` | yes |
+| Sensor-fusion figure | `output/figures/sensor_fusion_track.png` | yes |
 | Resolved manuscript tree | `output/manuscript/` | yes |
 
 Because `output/` is git-ignored, a full regeneration leaves the tree clean —

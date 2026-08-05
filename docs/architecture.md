@@ -19,7 +19,8 @@ src/the_world_is_not_enough/
 
 ### Pure domain core
 
-`pipeline_security.py`, `sub_defense.py`, `hostage_psychology.py` are the
+`pipeline_security.py`, `sub_defense.py`, `hostage_psychology.py`,
+`power_grid.py`, `negotiation_tactics.py`, and `sensor_fusion.py` are the
 mathematical heart. They are infrastructure-free (stdlib + numpy/matplotlib
 only), deterministic, and **importable without `bond_api`**. This is the
 layer-contract guarantee: if the protocol dependency were ever unavailable,
@@ -27,12 +28,15 @@ the models still run.
 
 ### Protocol adapter
 
-`mission.py` imports `bond_api.protocol` and `bond_api.registry`. It exposes
-the top-level `MissionProvider` class (film = `the_world_is_not_enough`,
-codename `ELEKTRA`), returns protocol dataclasses for all five stages, builds a
-`Provenance` with `seed=1999`, `wall_time_s=0.0`, and an SHA-256 `input_hash`
-over the executed plan, and registers domain callables in the module-level
-`GADGETS` registry at import time.
+The `mission.py` adapter imports `bond_api.protocol` and
+`bond_api.registry`. It exposes the top-level `MissionProvider` class
+(film = `the_world_is_not_enough`, codename `ELEKTRA`), returns protocol
+dataclasses for all five stages, builds a `Provenance` with `seed=1999`,
+`wall_time_s=0.0`, and an SHA-256 `input_hash` over the executed plan, and
+registers domain callables in the module-level `GADGETS` registry at import
+time. Its *public shape* (the protocol methods and the gadget registry
+convention) is stable; deeper pillars are added as extra plan steps, result
+keys, and gadgets, never as protocol changes.
 
 ### Manuscript + figures
 

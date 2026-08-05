@@ -9,7 +9,12 @@ from __future__ import annotations
 from pathlib import Path
 
 from the_world_is_not_enough import figures as F
-from the_world_is_not_enough import hostage_psychology, pipeline_security, sub_defense
+from the_world_is_not_enough import (
+    hostage_psychology,
+    pipeline_security,
+    sensor_fusion,
+    sub_defense,
+)
 
 
 class TestIndividualFigures:
@@ -45,12 +50,13 @@ class TestIndividualFigures:
 
 
 class TestGenerateAllFigures:
-    def test_writes_all_three(self, tmp_path: Path) -> None:
+    def test_writes_all_four(self, tmp_path: Path) -> None:
         out = F.generate_all_figures(tmp_path)
         assert set(out) == {
             "pipeline_network",
             "submarine_detection",
             "hostage_dynamics",
+            "sensor_fusion_track",
         }
         for path in out.values():
             assert path.is_file()
@@ -61,3 +67,14 @@ class TestGenerateAllFigures:
         F.generate_all_figures(nested)
         assert nested.is_dir()
         assert (nested / "pipeline_network.png").is_file()
+
+    def test_sensor_fusion_track(self, tmp_path: Path) -> None:
+        tracking = sensor_fusion.TrackConfig(seed=7)
+        truth, measurements = sensor_fusion.generate_track(tracking)
+        model = sensor_fusion.KalmanFilter(tracking, measurements[0])
+        filtered = model.run(measurements)
+        path = F.figure_sensor_fusion_track(
+            truth, measurements, filtered, tmp_path / "sf.png"
+        )
+        assert path.is_file()
+        assert path.stat().st_size > 0

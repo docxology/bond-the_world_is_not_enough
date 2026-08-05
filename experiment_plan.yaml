@@ -22,6 +22,18 @@ pillars:
     model: "4-state Stockholm-syndrome ODE, RK4 integration"
     scenario: "30 days, dt=0.25, onset threshold 0.5"
     expected_figures: ["hostage_dynamics.png"]
+  power:
+    model: "DC power flow + sequential cascading-failure blackout"
+    scenario: "8-bus, 10-line two-area corridor; strong-tie initial outage"
+    expected_figures: []
+  negotiation:
+    model: "Rubinstein alternating-offer equilibrium + concession settlement"
+    scenario: "10-day deadline, negotiator discount 0.9, syndrome-driven patience"
+    expected_figures: []
+  fusion:
+    model: "constant-velocity linear Kalman filter"
+    scenario: "20 noisy position fixes, measurement std 2.0, seed 1999"
+    expected_figures: ["sensor_fusion_track.png"]
 
 expected_tables:
   - "config token table (manuscript/05_experimental_setup.md)"

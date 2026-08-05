@@ -23,6 +23,7 @@ artifact_expectations:
     - "output/figures/pipeline_network.png"
     - "output/figures/submarine_detection.png"
     - "output/figures/hostage_dynamics.png"
+    - "output/figures/sensor_fusion_track.png"
   output_data:
     - "output/data/manuscript_variables.json"
     - "output/data/elektra_mission.json"

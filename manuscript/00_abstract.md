@@ -1,7 +1,9 @@
 # Abstract
 
 In *The World Is Not Enough* (1999), mission codename **ELEKTRA**, we develop
-deterministic special-agent mission software across three operational pillars:
+deterministic special-agent mission software across six operational pillars.
+Three were established earlier; three deepen the package into energy
+infrastructure and hostage-negotiation strategy.
 
 1. **Oil-pipeline security** — a capacitated flow model of a Caspian crude
    trunk is analysed with the Edmonds–Karp max-flow/min-cut algorithm and
@@ -22,6 +24,22 @@ deterministic special-agent mission software across three operational pillars:
    syndrome index crossing the onset threshold on day
    **{{RESULT_SYNDROME_ONSET_DAY}}** and reaching a final value of
    **{{RESULT_SYNDROME_FINAL}}**.
+4. **Energy infrastructure** — a DC power-flow model of a two-area grid with a
+   cascading-failure solver shows that cutting the
+   {{CONFIG_GRID_INITIAL_OUTAGE}} interconnector reroutes all transfer onto a
+   weak tie that trips, blacking out **{{RESULT_BLACKOUT_LOST_MW}} MW**
+   (**{{RESULT_BLACKOUT_FRACTION}}** of system load) in a
+   {{RESULT_BLACKOUT_STEPS}}-step cascade.
+5. **Hostage negotiation** — Rubinstein alternating-offer bargaining ties the
+   captor's patience to the syndrome state: identification lifts the captor's
+   equilibrium claim to **{{RESULT_NEG_CAPTOR_SHARE}}** of the stake
+   (a **{{RESULT_NEG_CAPTOR_LEVERAGE}}**-boost over the no-syndrome baseline),
+   and concession closes the deal by day **{{RESULT_NEG_SETTLEMENT_DAY}}**.
+6. **Sensor fusion** — a linear Kalman filter tracks the hijacked submarine
+   from noisy position fixes, cutting position RMSE from
+   **{{RESULT_TRACK_MEASUREMENT_RMSE}}** to **{{RESULT_TRACK_RMSE}}**
+   (a **{{RESULT_TRACK_GAIN}}%** gain) and converging to a final error of
+   **{{RESULT_TRACK_FINAL_ERROR}}**.
 
 All results are real model outputs, produced deterministically under seed
 {{CONFIG_SEED}}; no metric in this manuscript is hand-authored.

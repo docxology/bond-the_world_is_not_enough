@@ -36,6 +36,47 @@
   manuscript variables (incl. live token cross-reference), script smoke.
   Zero mocks; 148 tests; 97%+ line+branch coverage on `src/`.
 
+## Built (phase-4 deep improvement)
+
+### New pure domain modules (energy infrastructure + hostage engineering)
+- `power_grid.py` — energy infrastructure: DC power flow (susceptance-matrix
+  solve with slack-connected live component) and a deterministic sequential
+  cascading-failure blackout (`cascade_failure`). Canonical two-area corridor:
+  cutting the strong `3->5` tie reroutes transfer onto the weak `4->5` tie,
+  which trips and islands the whole 220 MW load area (44% blackout).
+- `negotiation_tactics.py` — hostage negotiation: Rubinstein alternating-offer
+  equilibrium (`equilibrium_shares`), syndrome-driven captor patience
+  (`captor_discount_from_syndrome`), and a deterministic concession model
+  (`settlement_analysis`) reporting settlement day/split or stalemate/deadline.
+  The hostage-psychology syndrome feeds the bargaining layer.
+- `sensor_fusion.py` — submarine tracking: constant-velocity linear Kalman
+  filter (predict/update, covariance), deterministic seeded measurement
+  generation, and RMSE/gain metrics vs. the raw fixes.
+
+### Deepened adapter + wiring
+- `mission.py` — protocol surface **unchanged** (frozen `MissionProvider`,
+  module-level `GADGETS`); internals deepened to 8 plan steps / richer result
+  dict. New gadgets: `power_cascade`, `negotiation_settlement`,
+  `submarine_tracking`.
+- `manuscript_variables.py` — new `CONFIG_GRID_*`, `CONFIG_NEG_*`,
+  `CONFIG_FUSION_*` and `RESULT_BLACKOUT_*`, `RESULT_NEG_*`, `RESULT_TRACK_*`
+  tokens; `_config_tokens` extended.
+- `figures.py` — fourth figure `sensor_fusion_track.png` (Kalman track vs
+  truth vs fixes).
+
+### Tests
+- New `test_power_grid.py`, `test_negotiation_tactics.py`,
+  `test_sensor_fusion.py`; extended `test_mission.py` (8 steps, new
+  result/gadget assertions), `test_figures.py` (4 figures), and
+  `test_manuscript_variables.py` (new token values). 230 tests; 97.15%
+  line+branch coverage on `src/`.
+
+### Manuscript
+- Abstract, methodology (2.4–2.6), results (3.4–3.6 + sensor-fusion figure),
+  conclusion, experimental setup, reproducibility, and scope/related-work
+  updated with the deepened outputs; `references.bib` extended with Stott
+  (1974), Dobson *et al.* (2001), Rubinstein (1982), and Kalman (1960).
+
 ## Declared integration points / follow-ups
 
 - **Orchestrator binding.** The package is discoverable by slug
@@ -47,6 +88,12 @@
   API changes, re-sync the call in `scripts/execute.py`.
 - **Sonar model.** The passive equation is simplified (spherical spreading +
   absorption); a frequency-dependent propagation model is a natural extension.
+- **Power-grid model.** The DC cascade is lossless and sequential; a parallel
+  (all-overloaded-trip) cascade, reactive/voltage physics, or stochastic
+  outage sampling would extend it.
+- **Sensor fusion.** The filter fuses noisy position fixes; true
+  bearing-only fusion from a maneuvering observer (batch least-squares TMA) is
+  a documented follow-up.
 - **Hostage model.** Parameters are a modeling assumption exposed in
   `manuscript/config.yaml`; fitting to case data (if datasets become
   available) would replace the by-construction calibration.

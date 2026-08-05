@@ -1,9 +1,9 @@
 """Deterministic figure generation for the ELEKTRA mission.
 
-Renders the three pillar figures into ``output/figures/`` using a fixed,
-headless Matplotlib style. All figures are derived from the same deterministic
-models the mission executes, so a figure is always a faithful reproduction of
-the current model outputs. No random draws, no wall-clock dependence.
+Renders the concept figures into ``output/figures/`` using a fixed, headless
+Matplotlib style. All figures are derived from the same deterministic models
+the mission executes, so a figure is always a faithful reproduction of the
+current model outputs. No random draws, no wall-clock dependence.
 
 Figures:
 
@@ -12,7 +12,9 @@ Figures:
 * ``submarine_detection.png`` — the passive-sonar risk field with naive vs.
   least-risk evasion routes overlaid;
 * ``hostage_dynamics.png`` — the Stockholm-syndrome ODE time series
-  (fear / gratitude / identification / syndrome index).
+  (fear / gratitude / identification / syndrome index);
+* ``sensor_fusion_track.png`` — the Kalman-filter track of the hijacked
+  submarine against the noisy fixes and the true trajectory.
 """
 
 from __future__ import annotations
@@ -25,16 +27,19 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import numpy as np
 
 from the_world_is_not_enough import (
     hostage_psychology,
     pipeline_security,
+    sensor_fusion,
     sub_defense,
 )
 
 __all__ = [
     "figure_hostage_dynamics",
     "figure_pipeline_network",
+    "figure_sensor_fusion_track",
     "figure_submarine_detection",
     "generate_all_figures",
 ]
@@ -179,10 +184,43 @@ def figure_hostage_dynamics(
     return path
 
 
+def figure_sensor_fusion_track(
+    truth: np.ndarray,
+    measurements: np.ndarray,
+    filtered: list[sensor_fusion.FilterStep],
+    save_path: str | os.PathLike[str] = "output/figures/sensor_fusion_track.png",
+) -> Path:
+    """Render the Kalman track against the true trajectory and the raw fixes."""
+    _style()
+    fig, ax = plt.subplots(figsize=(7, 6))
+    ax.plot(truth[:, 0], truth[:, 1], color="black", lw=2, label="true trajectory")
+    ax.scatter(
+        measurements[:, 0],
+        measurements[:, 1],
+        s=18,
+        color="gray",
+        alpha=0.7,
+        label="noisy position fixes",
+    )
+    fx = [step.position[0] for step in filtered]
+    fy = [step.position[1] for step in filtered]
+    ax.plot(fx, fy, color="lime", lw=2, marker="o", ms=3, label="Kalman track")
+    ax.set_title("Sensor fusion — Kalman tracking of the hijacked submarine")
+    ax.set_xlabel("x (km)")
+    ax.set_ylabel("y (km)")
+    ax.legend(loc="upper left", fontsize=8)
+    fig.tight_layout()
+    path = Path(save_path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path)
+    plt.close(fig)
+    return path
+
+
 def generate_all_figures(
     output_dir: str | os.PathLike[str] = "output/figures",
 ) -> dict[str, Path]:
-    """Generate all three concept figures and return their absolute paths."""
+    """Generate all concept figures and return their absolute paths."""
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
@@ -223,8 +261,17 @@ def generate_all_figures(
 
     dynamics = hostage_psychology.integrate_dynamics()
     fig3 = figure_hostage_dynamics(dynamics, out / "hostage_dynamics.png")
+
+    tracking = sensor_fusion.TrackConfig(seed=1999)
+    truth, measurements = sensor_fusion.generate_track(tracking)
+    filter_model = sensor_fusion.KalmanFilter(tracking, measurements[0])
+    filtered = filter_model.run(measurements)
+    fig4 = figure_sensor_fusion_track(
+        truth, measurements, filtered, out / "sensor_fusion_track.png"
+    )
     return {
         "pipeline_network": fig1,
         "submarine_detection": fig2,
         "hostage_dynamics": fig3,
+        "sensor_fusion_track": fig4,
     }

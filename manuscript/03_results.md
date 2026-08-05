@@ -62,3 +62,45 @@ horizon the captive's influence ratio toward the captor is
 **{{RESULT_INFLUENCE_RATIO}}**. The model thus provides a principled estimate
 of *when* an emotional bond forms — the negotiation window negotiators must
 anticipate.
+
+## 3.4 Energy infrastructure: coordinated blackout
+
+In the canonical two-area grid, intact operation keeps both interconnectors
+within rating (the strong `{{CONFIG_GRID_INITIAL_OUTAGE}}` tie carries the
+larger share; the weak tie stays below its 150 MW limit). Cutting the strong
+interconnector forces the entire Area-B transfer onto the weak tie, which
+overloads and trips. The cascade — **{{RESULT_BLACKOUT_STEPS}}** tripping step
+after the initial outage, **{{RESULT_BLACKOUT_LINES_TRIPPED}}** lines tripped
+total — islands the whole load area: **{{RESULT_BLACKOUT_LOST_MW}} MW** lost,
+**{{RESULT_BLACKOUT_FRACTION}}** of system load. This is the saboteur's force
+multiplier: a single well-placed cut cascades into a regional blackout,
+crippling the pumped corridor's pumping stations and the hijacked sub's
+support base at once.
+
+## 3.5 Hostage negotiation: syndrome-driven leverage
+
+The Stockholm-syndrome model's final state
+($S$ = {{RESULT_SYNDROME_FINAL}}) feeds the bargaining layer: it lifts the
+captor's patience, raising the captor's equilibrium claim to
+**{{RESULT_NEG_CAPTOR_SHARE}}** of the pie — a **{{RESULT_NEG_CAPTOR_LEVERAGE}}**
+increase over the no-syndrome baseline of 0.198. Under the symmetric concession
+schedule the captor and negotiator
+still close the deal at parity by day **{{RESULT_NEG_SETTLEMENT_DAY}}**
+(split **{{RESULT_NEG_SETTLEMENT_SPLIT}}**), but the syndrome has quietly
+raised the captor's *reservation value* — and past a patience threshold the
+negotiation would stalemate outright. The lesson for the negotiator: the bond
+changes the captor's bottom line, not just the mood in the room.
+
+## 3.6 Sensor fusion: tracking the hijacked hull
+
+![The Kalman-filter track (green) of the hijacked submarine against the noisy
+position fixes (gray) and the true constant-velocity trajectory (black).](../output/figures/sensor_fusion_track.png){#fig:sensor_fusion_track}
+
+Fusing {{CONFIG_FUSION_STEPS}} noisy position fixes (measurement std
+{{CONFIG_FUSION_MEASUREMENT_NOISE}}) with the constant-velocity Kalman filter
+cuts the track's position RMSE from **{{RESULT_TRACK_MEASUREMENT_RMSE}}** (the
+raw fixes) to **{{RESULT_TRACK_RMSE}}** — a **{{RESULT_TRACK_GAIN}}%** reduction
+— and drives the final position error to **{{RESULT_TRACK_FINAL_ERROR}}**
+(Figure @fig:sensor_fusion_track). The filter converges, so an intercept
+solution can be generated reliably even while the hull evades through the sonar
+shadow.

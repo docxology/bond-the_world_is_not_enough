@@ -18,7 +18,7 @@ bond root files, or the template repo.
 
 | Surface | Rule |
 | --- | --- |
-| `src/the_world_is_not_enough/pipeline_security.py`, `sub_defense.py`, `hostage_psychology.py` | Pure domain core — stdlib + numpy/matplotlib only; **no** `bond_api` import; deterministic |
+| `pipeline_security.py`, `sub_defense.py`, `hostage_psychology.py`, `power_grid.py`, `negotiation_tactics.py`, `sensor_fusion.py` (in `src/the_world_is_not_enough/`) | Pure domain core — stdlib + numpy/matplotlib only; **no** `bond_api` import; deterministic |
 | `src/the_world_is_not_enough/mission.py` | Thin adapter — imports `bond_api.protocol` + `bond_api.registry`; returns protocol dataclasses; `Provenance.wall_time_s = 0.0`; registers gadgets |
 | `src/the_world_is_not_enough/figures.py`, `manuscript_variables.py` | Deterministic figures + token hydration from `manuscript/config.yaml` + measured outputs |
 | `scripts/` | Thin orchestrators — may import `bond_api`, `bond_utilities`, and the package; business logic stays in `src/` |
@@ -51,7 +51,8 @@ bond root files, or the template repo.
 (`[tool.uv.sources]`) from the same suite tree. The domain core stays
 importable without `bond_api`; `mission.py` is the only module that imports it.
 Gadgets (`pipeline_analysis`, `tamper_simulation`, `evasion_analysis`,
-`hostage_dynamics`, `mission_input_hash`) are registered at import in the
+`hostage_dynamics`, `power_cascade`, `negotiation_settlement`,
+`submarine_tracking`, `mission_input_hash`) are registered at import in the
 module-level `GADGETS` registry for the orchestrator to discover.
 
 ## Verification checklist

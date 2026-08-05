@@ -5,12 +5,13 @@ not let prose drift from them).
 
 | Metric | Value |
 | --- | --- |
-| Test count (pytest) | 148 |
-| Line + branch coverage on `src/` | 97.18% (gate: ≥90%) |
+| Test count (pytest) | 230 |
+| Line + branch coverage on `src/` | 97.15% (gate: ≥90%) |
 | Coverage gate | `uv run pytest tests/ --cov=src --cov-fail-under=90` |
-| Domain modules | 3 (`pipeline_security`, `sub_defense`, `hostage_psychology`) |
+| Domain modules | 6 (`pipeline_security`, `sub_defense`, `hostage_psychology`, `power_grid`, `negotiation_tactics`, `sensor_fusion`) |
 | MissionProvider stages | 5 (brief, recon, plan, execute, debrief) |
-| Concept figures | 3 |
+| Mission plan steps | 8 |
+| Concept figures | 4 |
 | Manuscript sections | 8 (00–07) + references |
 
 ## Regenerate
