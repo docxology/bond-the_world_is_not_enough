@@ -11,10 +11,17 @@ The ELEKTRA package is deterministic by construction.
   model — max-flow/min-cut, betweenness, the sonar field, Dijkstra routing, the
   RK4 integration, the DC load flow and its cascade, and the bargaining
   equilibrium — makes no random draws at all. Runs are byte-reproducible.
-- **No wall-clock in results.** The mission outcome's `Provenance.wall_time_s`
-  is always `0.0`; persisted provenance records use a fixed nominal mission
-  epoch. `GENERATION_TIMESTAMP` is the only time-valued token and is overridable
-  (`now=`) for deterministic regeneration.
+- **No wall-clock anywhere in the persisted artifacts.** The mission outcome's
+  `Provenance.wall_time_s` is always `0.0`; persisted provenance records use a
+  fixed nominal mission epoch. `MANUSCRIPT_EDITION_STAMP` is the only
+  time-valued token and it is *derived* from the committed `paper.date` key in
+  `config.yaml` — it is an edition stamp a maintainer edits on purpose, never a
+  reading of the clock at generation time. Consequently two regenerations of
+  `output/data/manuscript_variables.json` and `output/manuscript/` on one
+  interpreter are byte-identical, which
+  `tests/test_manuscript_variables.py::TestRegenerationDeterminism` proves by
+  running the generator twice across a second boundary and comparing the
+  persisted bytes.
 - **No external calls.** The pure domain cores never touch the network or the
   filesystem; the only I/O is thin scripts writing regenerable `output/`
   artifacts (git-ignored).
@@ -56,5 +63,9 @@ rendering `nan` as a measured value.
 | Sensor-fusion figure | `output/figures/sensor_fusion_track.png` | yes |
 | Resolved manuscript tree | `output/manuscript/` | yes |
 
-Because `output/` is git-ignored, a full regeneration leaves the tree clean —
-itself a live determinism proof.
+`output/` is git-ignored, so regeneration never dirties the tree — but a clean
+`git status` is a consequence of the ignore rule, not evidence of determinism.
+The evidence is the two-run byte comparison in
+`TestRegenerationDeterminism`, which regenerates the JSON and the resolved
+manuscript tree into two fresh directories a second apart and asserts every
+file matches byte for byte.

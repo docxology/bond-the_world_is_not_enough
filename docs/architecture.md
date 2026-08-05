@@ -246,6 +246,15 @@ domain models* to compute every `{{TOKEN}}`:
   per-day rate.
 - `_assert_measurable()` → the strict gate: a blank or non-finite token fails
   hydration instead of rendering `nan` as a measured result.
+- `edition_stamp()` → the single time-valued token,
+  `MANUSCRIPT_EDITION_STAMP`, derived from the committed `paper.date` key and
+  rendered as a UTC midnight instant. It is **not** a clock reading, and it
+  fails closed (`KeyError`) when the key is absent rather than defaulting.
+  This is what makes the §6 byte-identity claim true: the whole token set is a
+  function of committed inputs, so regenerating `output/` twice produces the
+  same bytes. The previous implementation called `datetime.now()` and shipped
+  a different byte stream every run while a `now=`-injecting test reported
+  determinism.
 - `resolve_manuscript_tree()` → substitutes into `NN_*.md` and refuses, in
   strict mode, to write a section with a leftover `{{TOKEN}}`.
 

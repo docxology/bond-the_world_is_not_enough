@@ -74,7 +74,8 @@ and re-derive every syndrome and bargaining number in §3.
 
 - Package version: {{PACKAGE_VERSION}}
 - Python: {{PYTHON_VERSION}}
-- Manuscript variables generated: {{GENERATION_TIMESTAMP}}
+- Manuscript edition stamp (declared in `config.yaml` as `paper.date`, not a
+  clock reading): {{MANUSCRIPT_EDITION_STAMP}}
 
 ## What is *not* tunable from the config file
 

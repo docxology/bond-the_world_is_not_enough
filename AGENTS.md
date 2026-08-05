@@ -34,7 +34,10 @@ bond root files, or the template repo.
   uv run pytest tests/ --cov=src --cov-fail-under=90
   ```
 - **Deterministic.** Fixed seed (`1999`); no untracked RNG; no wall-clock in
-  results (`wall_time_s = 0.0`; fixed mission epoch for persisted records).
+  any persisted artifact (`wall_time_s = 0.0`; fixed mission epoch for
+  persisted records; `MANUSCRIPT_EDITION_STAMP` derived from the committed
+  `paper.date`, never `datetime.now()`). Regenerating `output/` twice must be
+  byte-identical.
 - **Lint + types.** `uv run ruff check src/ scripts/ tests/`,
   `uv run ruff format src/ scripts/ tests/`, `uv run mypy src/ scripts/`.
 - **Metrics are tokens.** Never hand-author numbers in prose; they flow through

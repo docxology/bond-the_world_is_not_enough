@@ -47,12 +47,19 @@ measured results plus `steps_completed`. Adding a ninth pillar means a ninth
   stochastic and both are seeded: the tamper simulation
   (`random.Random(seed)`) and the fusion measurement noise
   (`numpy.random.default_rng(seed)`). Everything else makes no random draws.
-- No wall-clock in results. `Provenance.wall_time_s` stays `0.0`; persisted
-  records use the fixed mission epoch in `scripts/execute.py`.
-  `GENERATION_TIMESTAMP` is the only time-valued token and takes a `now=`
-  override for deterministic regeneration.
+- No wall-clock in *any* persisted artifact. `Provenance.wall_time_s` stays
+  `0.0`; persisted records use the fixed mission epoch in `scripts/execute.py`.
+  `MANUSCRIPT_EDITION_STAMP` is the only time-valued token and is derived from
+  the committed `paper.date` key by
+  `manuscript_variables.edition_stamp()` — never from `datetime.now()`. Do not
+  reintroduce a clock reading behind a `now=` override: an injectable clock
+  makes the *test* deterministic while leaving the shipped artifact
+  nondeterministic, which is exactly how this breach survived a green suite.
 - Two runs of `scripts/execute.py` must produce byte-identical outcomes and an
-  identical `input_hash`.
+  identical `input_hash`; two runs of
+  `scripts/z_generate_manuscript_variables.py` must produce byte-identical
+  `output/` artifacts. Both are enforced by tests, the latter by
+  `tests/test_manuscript_variables.py::TestRegenerationDeterminism`.
 - Graphics use headless `Agg`; figures carry no timestamps.
 
 ### 4. Metrics are tokens

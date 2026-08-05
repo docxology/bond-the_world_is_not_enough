@@ -6,6 +6,13 @@ Every ``{{TOKEN}}`` in ``manuscript/*.md`` resolves through
 are never hand-authored in prose: they flow through this module so the
 manuscript cannot drift from the code.
 
+No token reads a wall clock. The one time-valued token,
+``MANUSCRIPT_EDITION_STAMP``, is derived from the committed ``paper.date`` key
+(see :func:`edition_stamp`), so regenerating the artifacts is byte-identical —
+the property §6 of the manuscript claims and
+``tests/test_manuscript_variables.py::TestRegenerationDeterminism`` enforces by
+regenerating twice across a second boundary and diffing the persisted bytes.
+
 The consuming orchestrator is ``scripts/z_generate_manuscript_variables.py``
 (thin wrapper); the live cross-reference gate lives in
 ``tests/test_manuscript_variables.py``.
@@ -13,10 +20,10 @@ The consuming orchestrator is ``scripts/z_generate_manuscript_variables.py``
 
 from __future__ import annotations
 
+import datetime as _dt
 import math
 import platform
 import re
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, cast
 
@@ -35,6 +42,7 @@ __all__ = [
     "DECLARED_CONFIG_TOKENS",
     "DERIVED_DATASET_TOKENS",
     "RESULT_TOKEN_UNITS",
+    "edition_stamp",
     "generate_variables",
     "load_manuscript_config",
     "resolve_manuscript_tree",
@@ -449,19 +457,59 @@ def _assert_units_consistent(result_tokens: dict[str, str]) -> None:
             )
 
 
+def edition_stamp(paper: dict[str, Any]) -> str:
+    """The manuscript edition stamp, derived from the committed ``paper.date``.
+
+    This is deliberately **not** a wall clock. Every artifact this module
+    persists — ``output/data/manuscript_variables.json`` and the resolved
+    ``output/manuscript/`` tree — is covered by the byte-identity claim in §6
+    of the manuscript, so the one time-valued token has to come from a
+    committed source that a maintainer edits on purpose. A wall clock here
+    silently falsified that claim on every regeneration.
+
+    Args:
+        paper: The ``paper`` mapping from ``manuscript/config.yaml``.
+
+    Returns the date rendered as a UTC ISO-8601 instant at midnight.
+
+    Raises:
+        KeyError: if ``paper.date`` is absent — fail closed rather than
+            defaulting, so a deleted key cannot pass unnoticed.
+        ValueError: if ``paper.date`` is not an ISO ``YYYY-MM-DD`` date.
+    """
+    raw = paper.get("date")
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
+        raise KeyError(
+            "manuscript config 'paper.date' is required — it is the source of "
+            "the manuscript edition stamp, which must never be a wall clock"
+        )
+    if isinstance(raw, _dt.datetime):
+        date = raw.date()
+    elif isinstance(raw, _dt.date):
+        date = raw
+    else:
+        date = _dt.date.fromisoformat(str(raw).strip())
+    return _dt.datetime(
+        date.year, date.month, date.day, tzinfo=_dt.timezone.utc
+    ).isoformat(timespec="seconds")
+
+
 def generate_variables(
     *,
     config_path: str | Path | None = None,
     require_outputs: bool = True,
-    now: datetime | None = None,
 ) -> dict[str, str]:
     """Compute the ``{{TOKEN}}`` → value mapping for the manuscript.
+
+    The mapping is a pure function of ``manuscript/config.yaml``, the
+    deterministic domain models and the interpreter version: no clock, no
+    network, no other ambient state. Two calls in one checkout on one
+    interpreter return equal dictionaries.
 
     Args:
         config_path: Override for ``manuscript/config.yaml``.
         require_outputs: When True (default), the domain models must run and
             produce measureable outputs (always satisfied by construction).
-        now: Clock override for the generation timestamp (deterministic tests).
 
     Returns a mapping of every manuscript token to its resolved string value.
     """
@@ -475,7 +523,6 @@ def generate_variables(
         _assert_measurable(result_tokens)
     _assert_units_consistent(result_tokens)
 
-    timestamp = (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
     return {
         "MISSION_TITLE": str(paper.get("title", "")),
         "MISSION_SUBTITLE": str(paper.get("subtitle", "")),
@@ -483,7 +530,7 @@ def generate_variables(
         "MISSION_CODENAME": MISSION_CODENAME,
         "PACKAGE_VERSION": str(paper.get("version", PACKAGE_VERSION)),
         "PYTHON_VERSION": platform.python_version(),
-        "GENERATION_TIMESTAMP": timestamp,
+        "MANUSCRIPT_EDITION_STAMP": edition_stamp(paper),
         **_config_tokens(config),
         **result_tokens,
     }

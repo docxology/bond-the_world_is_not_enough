@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import json
 import re
-from datetime import datetime, timezone
+import subprocess
+import sys
+import time
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -72,24 +76,80 @@ class TestGenerateVariables:
         variables = MV.generate_variables()
         assert all(isinstance(v, str) for v in variables.values())
 
-    def test_timestamp_deterministic_with_now(self) -> None:
-        now = datetime(2026, 8, 4, 12, 0, 0, tzinfo=timezone.utc)
-        a = MV.generate_variables(now=now)
-        b = MV.generate_variables(now=now)
-        assert a["GENERATION_TIMESTAMP"] == b["GENERATION_TIMESTAMP"]
+    def test_edition_stamp_is_the_committed_config_date(self) -> None:
+        """The one time-valued token reads `paper.date`, not the clock."""
+        config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+        declared = str(config["paper"]["date"])
+        variables = MV.generate_variables()
+        assert variables["MANUSCRIPT_EDITION_STAMP"].startswith(declared)
+        assert variables["MANUSCRIPT_EDITION_STAMP"] == f"{declared}T00:00:00+00:00"
+
+    def test_edition_stamp_follows_an_edited_config_date(self, tmp_path: Path) -> None:
+        """Editing `paper.date` moves the stamp — it is consumed, not decorative."""
+        config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+        config["paper"]["date"] = "1999-11-19"  # the film's US release date
+        edited = tmp_path / "config.yaml"
+        edited.write_text(yaml.safe_dump(config), encoding="utf-8")
+        variables = MV.generate_variables(config_path=edited)
+        assert variables["MANUSCRIPT_EDITION_STAMP"] == "1999-11-19T00:00:00+00:00"
+
+    def test_no_wall_clock_reaches_the_token_set(self) -> None:
+        """No token carries today's date unless the config declares it.
+
+        A regression that restored `datetime.now()` would put the current UTC
+        date into the token set; this pins that it is absent.
+        """
+        config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+        today = datetime.now(timezone.utc).date().isoformat()
+        if str(config["paper"]["date"]) == today:
+            pytest.skip("config date is today; the negative control cannot bind")
+        variables = MV.generate_variables()
+        offenders = {k: v for k, v in variables.items() if today in v}
+        assert not offenders, f"wall-clock date leaked into tokens: {offenders}"
+
+    def test_missing_config_date_fails_closed(self, tmp_path: Path) -> None:
+        """A deleted `paper.date` raises rather than defaulting to now()."""
+        config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+        del config["paper"]["date"]
+        edited = tmp_path / "config.yaml"
+        edited.write_text(yaml.safe_dump(config), encoding="utf-8")
+        with pytest.raises(KeyError, match="paper.date"):
+            MV.generate_variables(config_path=edited)
+
+    def test_unparsable_config_date_raises(self, tmp_path: Path) -> None:
+        config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
+        config["paper"]["date"] = "the nineteenth of November"
+        edited = tmp_path / "config.yaml"
+        edited.write_text(yaml.safe_dump(config), encoding="utf-8")
+        with pytest.raises(ValueError):
+            MV.generate_variables(config_path=edited)
+
+    def test_edition_stamp_accepts_an_unquoted_yaml_date(self) -> None:
+        """PyYAML parses an unquoted `2026-08-04` to `datetime.date`."""
+        assert (
+            MV.edition_stamp({"date": date(2026, 8, 4)}) == "2026-08-04T00:00:00+00:00"
+        )
+
+    def test_edition_stamp_accepts_a_yaml_datetime(self) -> None:
+        assert (
+            MV.edition_stamp({"date": datetime(2026, 8, 4, 9, 30, tzinfo=timezone.utc)})
+            == "2026-08-04T00:00:00+00:00"
+        )
+
+    def test_edition_stamp_rejects_blank(self) -> None:
+        with pytest.raises(KeyError):
+            MV.edition_stamp({"date": "   "})
 
     def test_strict_require_outputs(self) -> None:
         """require_outputs=False still resolves everything — results are measured inline.
 
-        `now=` is pinned because the two hydrations each re-run all six models
-        and can straddle a second boundary, which made GENERATION_TIMESTAMP
-        differ and this test flake. The package's own rule is never to assert
-        on a clock; the claim under test is about the flag, not the time.
+        This used to pin `now=` because the two hydrations each re-run all six
+        models and could straddle a second boundary, making the timestamp token
+        differ. That flake was the visible symptom of the real defect: the
+        token set was clock-dependent. It is now config-derived, so the two
+        calls compare directly with nothing injected.
         """
-        now = datetime(2026, 8, 5, 12, 0, 0, tzinfo=timezone.utc)
-        assert MV.generate_variables(now=now) == MV.generate_variables(
-            require_outputs=False, now=now
-        )
+        assert MV.generate_variables() == MV.generate_variables(require_outputs=False)
 
     def test_derived_dataset_tokens_match_the_models(self) -> None:
         """CONFIG_* tokens describing the datasets are derived, never typed."""
@@ -607,3 +667,97 @@ class TestLiveCrossReference:
             assert not missing, (
                 f"unresolved tokens in {section.name}: {sorted(missing)}"
             )
+
+
+class TestRegenerationDeterminism:
+    """The byte-identity claim in `manuscript/06_reproducibility.md`, enforced.
+
+    This runs the *real* generator twice and diffs the *persisted bytes*. It
+    injects nothing — no fixed clock, no frozen `now`. That distinction is the
+    whole point: the package previously shipped
+    `test_timestamp_deterministic_with_now`, which passed a pinned `now=` into
+    both calls and therefore could not observe that the default path read
+    `datetime.now()` and wrote a different byte stream on every run. A test
+    that supplies the determinism it is meant to be checking proves nothing.
+
+    Reintroducing a wall clock anywhere in the token set turns this red.
+    """
+
+    SCRIPT = ROOT / "scripts" / "z_generate_manuscript_variables.py"
+
+    @staticmethod
+    def _artifacts(root: Path) -> dict[str, bytes]:
+        """Every persisted artifact under `root`, keyed by relative path."""
+        return {
+            str(p.relative_to(root)): p.read_bytes()
+            for p in sorted(root.rglob("*"))
+            if p.is_file()
+        }
+
+    def _generate(self, out: Path) -> dict[str, bytes]:
+        proc = subprocess.run(
+            [sys.executable, str(self.SCRIPT), "--output-dir", str(out)],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert proc.returncode == 0, proc.stderr
+        artifacts = self._artifacts(out)
+        assert artifacts, "generator wrote nothing — the comparison would be vacuous"
+        return artifacts
+
+    def test_two_runs_a_second_apart_are_byte_identical(self, tmp_path: Path) -> None:
+        first = self._generate(tmp_path / "run_a")
+        time.sleep(1.1)  # straddle a second boundary: a clock would differ here
+        second = self._generate(tmp_path / "run_b")
+
+        assert sorted(first) == sorted(second)
+        differing = sorted(k for k in first if first[k] != second[k])
+        assert not differing, f"regeneration is not byte-identical: {differing}"
+
+    def test_the_comparison_covers_the_json_and_the_resolved_prose(
+        self, tmp_path: Path
+    ) -> None:
+        """Positive control: the byte set actually includes the claimed files.
+
+        A determinism assertion over an empty or JSON-only file set would be
+        green by construction, so pin that both halves of the claim's scope —
+        the variables JSON and the resolved manuscript sections — are compared.
+        """
+        artifacts = self._generate(tmp_path / "run")
+        assert "data/manuscript_variables.json" in artifacts
+        sections = [
+            k
+            for k in artifacts
+            if k.startswith("manuscript/")
+            and re.fullmatch(r"\d\d_.+\.md", Path(k).name)
+        ]
+        assert len(sections) >= 3, f"resolved prose missing from comparison: {sections}"
+
+    def test_a_clock_valued_token_would_be_caught(self, tmp_path: Path) -> None:
+        """Failability control: the byte comparison detects a per-run value.
+
+        This does not touch the shipped generator. It writes the same artifact
+        shape twice with one clock-derived field, a second apart, and shows the
+        comparison used above goes red — so a green result from the real
+        generator is evidence, not an artifact of a comparison that cannot
+        fail.
+        """
+
+        def write(out: Path) -> dict[str, bytes]:
+            target = out / "data" / "manuscript_variables.json"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            target.write_text(
+                json.dumps({"MANUSCRIPT_EDITION_STAMP": stamp}), encoding="utf-8"
+            )
+            return self._artifacts(out)
+
+        first = write(tmp_path / "clock_a")
+        time.sleep(1.1)
+        second = write(tmp_path / "clock_b")
+        assert sorted(first) == sorted(second)
+        assert any(first[k] != second[k] for k in first), (
+            "the byte comparison cannot detect a wall clock — it is vacuous"
+        )
