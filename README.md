@@ -157,4 +157,4 @@ stale.
 This is a film package in the local-only PROJECT BOND suite
 (`projects/working/bond/`, 27 film packages + infrastructure). Scope is exactly
 this package directory; there is no remote and nothing is pushed. See
-`TODO.md` for built modules and declared integration points.
+`TODO.md` for the open work, the accepted limitations, and the gates.

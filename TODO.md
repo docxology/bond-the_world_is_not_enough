@@ -1,111 +1,271 @@
 # TODO — the_world_is_not_enough (ELEKTRA)
 
-Remaining work only. What is already built is described in
-[`README.md`](README.md) (package surface) and
-[`docs/architecture.md`](docs/architecture.md) (module by module); measured
-counts live in [`docs/_generated/COUNTS.md`](docs/_generated/COUNTS.md). This
-file does not duplicate any of that.
+ELEKTRA is the *The World Is Not Enough* (1999) film package of the local-only
+PROJECT BOND suite: six pure deterministic domain pillars (oil-pipeline
+choke-point security, submarine evasion sonar, Stockholm-syndrome ODE dynamics,
+DC-power-flow cascading blackout, Rubinstein bargaining under syndrome-driven
+patience, Kalman sensor fusion) behind a thin frozen `bond_api.MissionProvider`
+adapter, with every manuscript number arriving as a hydrated `{{TOKEN}}`.
+Measured on 2026-08-05 in this working tree: **352 tests passed, 0 failed, 0
+skipped; 99.38% line+branch coverage on `src/`** (gate 90%), ruff clean, ruff
+format clean, mypy clean on `src/` + `scripts/`, and the strict token gate
+resolves 76 variables. Package surface is in [`README.md`](README.md), module
+detail in [`docs/architecture.md`](docs/architecture.md), counts in
+[`docs/_generated/COUNTS.md`](docs/_generated/COUNTS.md). This file is only
+what is still open.
 
-## Open — model extensions
+## Open work
 
-These are genuine follow-ups, each a scoped piece of work, not aspirations.
+### Correctness
 
-- **Frequency-dependent sonar propagation.** `sub_defense.passive_sonar_snr`
-  uses spherical spreading plus a single absorption coefficient. A
-  frequency-banded transmission-loss model (Thorp absorption, or a simple
-  bottom-bounce term) would change the shape of the risk field and therefore
-  the routed path. Requires a new `Sensor` field and a scope-section update.
-- **Parallel cascade tripping.** `power_grid.cascade_failure` trips the single
-  most-overloaded line per step. Real cascades trip every overloaded line in a
-  time step. The sequential rule makes the reported blackout a conservative
-  lower bound; implementing the parallel variant as an option (and reporting
-  both) would remove that caveat from
-  `manuscript/07_scope_and_related_work.md`.
-- **Bearing-only target-motion analysis.** `sensor_fusion` fuses noisy
-  *position* fixes because bearing-only tracking from a stationary observer is
-  scale-ambiguous. Batch least-squares TMA from a manoeuvring observer would
-  make the pillar match the film's geometry more honestly. This is the largest
-  of the three.
-- **Asymmetric-information bargaining.** `negotiation_tactics` assumes both
-  parties know both discount factors. A one-sided-uncertainty variant would
-  make the stalemate threshold a distribution rather than a point.
+**C1 — `mission.py` restates `config.yaml` instead of reading it.**
+The experiment parameters are declared twice: in
+`manuscript/config.yaml` under `experiment:` (read by
+`manuscript_variables.load_manuscript_config`) and again as module constants in
+`src/the_world_is_not_enough/mission.py:71-148` (`_TAMPER_EVENTS`,
+`_DETECT_PROB`, `_SUB_*`, `_HOSTAGE_*`, `_GRID_*`, `_NEGOTIATION`, `_FUSION`).
+The two are today kept equal by a test
+(`tests/test_mission.py:121-178`), so "the mission and the manuscript measure
+the same run" (`docs/architecture.md:210`) is a *checked guarantee*, not a
+single source of truth — a maintainer can still edit one side and only learn
+about it from a red suite.
+*Done looks like:* `mission.py` derives its parameters from the config block
+(or from one shared builder), the mirrored constants are gone, and
+`test_every_mirrored_constant_equals_its_config_key` is deleted as obsolete
+rather than kept as a crutch — without `mission.py` gaining a hard dependency
+on the manuscript tree at import time (the domain core must stay importable
+without `bond_api` and without `manuscript/`).
+*Demonstrate:* `rg -n "^_(TAMPER|DETECT|SUB|HOSTAGE|GRID|NEGOTIATION|FUSION)"
+src/the_world_is_not_enough/mission.py` returns nothing, and
+`uv run pytest tests/ --cov=src --cov-fail-under=90` is still green.
+(From the unresolved-findings file: "mission.py still restates the experiment
+block instead of reading it.")
 
-## Open — modelling assumptions to revisit
+**C2 — config accessors fail open: a deleted key is silently defaulted.**
+`src/the_world_is_not_enough/manuscript_variables.py:176` builds
+`DynamicsParams` with `rates.get(name, getattr(default, name))`; lines
+`196-198` and `213-215` return `hostage_psychology.DEFAULT_KINDNESS_EVENTS` /
+`DEFAULT_INITIAL_STATE` when the config key is absent; line 225 uses
+`config.get("experiment", {}) or {}`. Because the module defaults are
+numerically identical to the config values, **deleting**
+`experiment.hostage.dynamics.fear_decay` (or the whole `hostage:` block)
+changes no output and no test goes red — yet
+`manuscript/07_scope_and_related_work.md` (last paragraph) claims all nine rate
+constants, the initial state and the kindness schedule "are typed in
+`manuscript/config.yaml` … and consumed by the model". The perturbation tests
+in `tests/test_manuscript_variables.py` only bind values that are *present*.
+*Done looks like:* the accessors raise on a missing required key (fail closed),
+and a test deletes each of the nine rates, the `initial_state`, the
+`kindness_events` list and the `experiment` block in a temp-copied config and
+asserts a raise.
+*Demonstrate:* `uv run pytest tests/test_manuscript_variables.py -k missing -v`
+passes, and manually deleting `fear_decay` from `manuscript/config.yaml` then
+running `uv run python scripts/z_generate_manuscript_variables.py` exits
+non-zero (restore the file afterwards).
 
-- **Syndrome → patience mapping.** `captor_discount_from_syndrome` is a
-  declared linear assumption (`clamp(base + gain * S)`), not a fitted
-  relationship. It is the only cross-pillar data dependency in the package, so
-  it carries real weight in §3.5. If bargaining-under-duress data becomes
-  available, replace the mapping and re-derive; until then it must stay
-  labelled as an assumption in the scope section.
-- **Hostage-model parameters.** Calibrated by construction to reproduce onset
-  behaviour, not fitted to case data. As of 2026-08-05 all nine ODE rate
-  constants, the initial state and the kindness schedule really are declared in
-  `manuscript/config.yaml` under `experiment.hostage` and consumed from there —
-  previously the §7 "exposed in `config.yaml` for audit" claim was false, since
-  the rates lived only in the `DynamicsParams` defaults. Each is now perturbed
-  in a test and the reported syndrome index asserted to move, so the exposure
-  is consumption, not naming. Same rule as before: if the rates are ever
-  *fitted*, the scope section changes with them. The *form* of the equations
-  remains hardcoded in `hostage_psychology.derivatives` and is not tunable —
-  §7 says so.
+### Verification
 
-## Open — small, mechanical
+**V1 — the config↔adapter mirror test is an enumerated allow-list.**
+`tests/test_mission.py:121-178` asserts a hand-written pair for each mirrored
+value. It catches a *changed* value on either side, but a config key added to
+`experiment:` with no counterpart in `mission.py` (or a `mission.py` constant
+that no longer maps to any key) is not detected — the gate has no completeness
+half. This is the same failure mode the test's own docstring was written to
+close.
+*Done looks like:* the test is driven by a declared key→constant map that is
+also asserted to cover every leaf of the `experiment:` block, so adding an
+unmapped config key turns the suite red.
+*Demonstrate:* add `experiment.pipeline.unused_probe: 1` to
+`manuscript/config.yaml`, run `uv run pytest tests/test_mission.py -q`, and see
+it fail; remove the key and see it pass. Superseded automatically if C1 lands.
 
-- **Residual uncovered branches.** A handful of defensive `continue` branches
-  in `pipeline_security` (visited-node skips) and `power_grid` (empty-active
-  break) are unexercised. They are cheap to cover; decide per branch whether
-  the honest move is a test or a deletion.
-- **`_config_tokens` duplication — now enforced, still a duplication.**
-  The experiment parameters are still declared in two places:
-  `manuscript/config.yaml` (read by `manuscript_variables`) and the
-  `_TAMPER_EVENTS` / `_DETECT_PROB` / `_SUB_*` / `_HOSTAGE_*` / `_GRID_*` /
-  `_NEGOTIATION` / `_FUSION` constants in `mission.py`. As of 2026-08-05 the
-  second half of the fix has landed:
-  `test_mission.py::TestExecute::test_every_mirrored_constant_equals_its_config_key`
-  binds every adapter constant to its config key, and
-  `test_mission_and_manuscript_measure_the_same_run` compares the measured
-  outputs. Confirmed failable — the `tamper_events: 41` /
-  `detection_probability: 0.55` edit that previously left the suite green now
-  turns it red. The remaining (optional) improvement is the *single-source*
-  version: have `mission.py` read the config block so there is nothing to
-  mirror. Until then `docs/architecture.md`'s "the mission and the manuscript
-  measure the same run" is a tested guarantee, not a single source of truth.
+**V2 — six residual uncovered branches (4 uncovered statements).**
+From the run above (`--cov-report=term-missing`), each is a defensive arm the
+fixed datasets never take. Decide per branch: cover it with a real input, or
+delete it as unreachable given the dataclass validation.
+| Location | Branch |
+| --- | --- |
+| `src/the_world_is_not_enough/pipeline_security.py:284-285` | `if node in reachable: continue` in the min-cut reachability DFS |
+| `src/the_world_is_not_enough/pipeline_security.py:344-345` | `if not edge_flow: return {}` in the Brandes edge-betweenness tail |
+| `src/the_world_is_not_enough/power_grid.py:290-291` (+ partial `289->310`) | `if not active: break`, and the `max_steps`-exhausted loop exit |
+| `src/the_world_is_not_enough/sub_defense.py:219-220` | `if node in visited: continue` in the Dijkstra evasion loop |
+| `src/the_world_is_not_enough/figures.py:78->77` | the false arm of `if nxt not in depth` in the BFS depth layout |
+*Done looks like:* the `Missing` column is empty for all five modules, either
+because a test drives the branch or because the branch no longer exists.
+*Demonstrate:* `uv run pytest tests/ --cov=src --cov-report=term-missing -q |
+rg "pipeline_security|power_grid|sub_defense|figures"` shows `100.00%` and no
+missing lines. (Recorded as out-of-scope in the unresolved-findings file:
+"Four residual uncovered branches remain outside my findings' scope".)
 
-## Integration points (no action needed here)
+**V3 — `docs/_generated/COUNTS.md` has no staleness gate.**
+Every number in that file (352 tests, 99.38%, 76 tokens, 8 plan steps, 29
+result keys, 8 gadgets, 4 figures) is hand-copied from a run. Nothing
+re-measures them: `rg -l COUNTS tests/ scripts/` returns nothing. The table can
+drift silently the moment a test is added, which is exactly the failure the
+file's own header warns about.
+*Done looks like:* a test re-derives the structural rows (plan steps, result
+keys, gadgets, generated tokens, figure count, domain/support module counts)
+from live objects and asserts they equal the values parsed out of
+`docs/_generated/COUNTS.md`; the two run-dependent rows (test count, coverage)
+stay documented as regenerated by command.
+*Demonstrate:* edit any structural number in `COUNTS.md`, run
+`uv run pytest tests/ -q`, see it fail; revert and see it pass.
 
-- **Orchestrator binding.** The package is discoverable by slug
-  (`the_world_is_not_enough.mission.MissionProvider`) and registers `GADGETS`
-  at import. A bond-orchestrator run consumes both via `bond_api.discovery`
-  and `GadgetRegistry`. The public shape is frozen — see
-  [`docs/agent_instructions.md`](docs/agent_instructions.md).
-- **Provenance helper.** Persistence is bound to
-  `bond_utilities.mission_io.record_provenance_outcome`. If bond-utilities'
-  API changes, re-sync the single call site in `scripts/execute.py`.
+**V4 — the "zero mocks" and "no `template_code_project` lineage" rules are
+manual greps, not tests.** `AGENTS.md` lists both as hard rules and the
+verification block runs them by hand; nothing in `tests/` enforces either.
+Verified this session that both are currently *true*
+(`rg -n "unittest.mock|MagicMock|mocker\.|monkeypatch\b" tests/*.py` → no
+matches; the lineage grep → clean), so this is a missing guard, not a live
+violation.
+*Done looks like:* a test in `tests/` walks `tests/*.py` and `src/`+`scripts/`
+and asserts zero matches for the mock-framework patterns and the bracket-split
+lineage string, with a positive control proving the matcher fires on a planted
+string.
+*Demonstrate:* `uv run pytest tests/ -k "no_mocks or lineage" -v` passes and
+fails when a `from unittest import mock` line is temporarily added to a test
+file.
 
-## Done — do not re-open
+### Documentation
 
-Recorded so a future pass does not re-litigate them:
+**D1 — `manuscript_variables.__all__` omits three documented public helpers.**
+`src/the_world_is_not_enough/manuscript_variables.py:34-41` exports six names.
+`docs/architecture.md:236` documents `hostage_params()`, `kindness_events()`
+and `hostage_initial_state()` as the public config→model builders, and
+`tests/test_mission.py:157-159` imports them as such. Either they belong in
+`__all__` or the doc should mark them internal.
+*Done looks like:* `__all__` and `docs/architecture.md` name the same public
+surface for that module.
+*Demonstrate:* `uv run python -c "import sys; sys.path.insert(0,'src'); from
+the_world_is_not_enough import manuscript_variables as MV;
+print(sorted(MV.__all__))"` lists the three helpers, and
+`rg -n "hostage_params|kindness_events|hostage_initial_state"
+docs/architecture.md` agrees.
 
-- Six pillars implemented, tested, and written into the manuscript
-  (§2.1–2.6 / §3.1–3.6) with every metric arriving as a `{{TOKEN}}`.
-- Dead "slack bus islanded" branch removed from `dc_power_flow`; the guard was
-  unreachable *and* silently returned an empty flow map.
-- Manuscript hydration gate rewritten from a green-by-construction key check
-  into a real blank/non-finite rejection, with tests that fail it.
-- Escaped-backslash LaTeX corruption fixed in methodology §2.4–2.6.
-- `hostage_psychology.math_exp` (a `math.exp` wrapper with a tautological
-  test) removed.
+Nothing else open here. Checked this session: the six adversarial-audit
+findings in `output/verify/the_world_is_not_enough.json` are all reflected in
+the current text — the §5/§7 config-exposure claim now matches
+`manuscript/config.yaml` (all nine rates present), the tamper number is typed
+as a cumulative volume in kbbl with the upper-bound caveat in
+`manuscript/03_results.md:29-40` and `07_scope_and_related_work.md:26-30`,
+`RESULT_NEG_CAPTOR_LEVERAGE_PCT` is rendered as a labelled percent relative
+increase, `manuscript/05_experimental_setup.md` distinguishes `config.yaml`
+rows from `derived` rows, `tests/test_claim_ledger.py:98-137` runs a real
+mutation control with a positive control, and `docs/architecture.md:90-113`
+documents the `hostage_psychology` dataclasses.
 
-## Guardrails
+### Extension
+
+Genuine future work; none of these is a defect.
+
+**E1 — delivered-volume tamper model.** `simulate_tamper`
+(`src/the_world_is_not_enough/pipeline_security.py:487-511`) charges every
+undetected event `edge.capacity * nominal_downtime_days`, i.e. the segment's
+*rated* capacity, regardless of what the max-flow solution actually routes
+through it — so tampering a dead-end spur is priced above its marginal delivery
+impact and the reported total is an upper bound. A truer model re-solves the
+max flow with the damaged segment removed and charges the *delivery shortfall*.
+*Done looks like:* an opt-in `accounting="delivered"` mode reporting a shortfall
+volume alongside the rated-capacity upper bound, both tokenised, and the
+upper-bound caveat in `07_scope_and_related_work.md:26-30` narrowed to the mode
+it describes.
+*Demonstrate:* new tests assert the delivered-shortfall total is ≤ the
+rated-capacity total on the canonical dataset and strictly smaller when a spur
+is tampered; then
+`uv run python scripts/z_generate_manuscript_variables.py`. (Directly from the
+unresolved-findings file.)
+
+**E2 — frequency-dependent sonar propagation.** `passive_sonar_snr`
+(`src/the_world_is_not_enough/sub_defense.py`) uses spherical spreading plus a
+single `absorption_db_per_km`. A frequency-banded transmission-loss model
+(Thorp absorption, or a bottom-bounce term) changes the shape of the risk field
+and therefore the routed evasion path. Needs a new `Sensor` field, a config key,
+and a scope-section update.
+*Demonstrate:* a test showing two frequency bands produce different routes on
+the same geometry, plus a regenerated §3 token set.
+
+**E3 — parallel cascade tripping.** `cascade_failure`
+(`src/the_world_is_not_enough/power_grid.py:289-308`) trips only the single
+most-overloaded line per step. Real cascades trip every overloaded line in a
+time step; the sequential rule is why the reported blackout is documented as a
+conservative lower bound.
+*Done looks like:* a `mode="parallel"` option reporting both magnitudes, and
+the "parallel-time-step tripping" clause removed from
+`07_scope_and_related_work.md`.
+
+**E4 — bearing-only target-motion analysis.** `sensor_fusion` fuses noisy
+*position* fixes because bearing-only tracking from a stationary observer is
+scale-ambiguous. Batch least-squares TMA from a manoeuvring observer would match
+the film's geometry more honestly. Largest of the four.
+
+**E5 — asymmetric-information bargaining.** `negotiation_tactics` assumes both
+parties know both discount factors. A one-sided-uncertainty variant would turn
+the stalemate threshold from a point into a distribution.
+
+## Known limitations (not bugs)
+
+Recorded so a future pass does not re-litigate them.
+
+- **Hostage rate constants are chosen, not estimated.** All nine live in
+  `manuscript/config.yaml` under `experiment.hostage.dynamics` and each is
+  perturbed by a test that asserts the syndrome index moves, so the exposure is
+  consumption rather than naming. But there is no independent ground truth for
+  the syndrome trajectory: the reported onset day, peak and final index are
+  properties *of this parameterisation* and carry no uncertainty interval.
+  Stated in `manuscript/07_scope_and_related_work.md`. Fitting to case data is
+  out of scope for this package.
+- **The *form* of the ODE system is hardcoded.** `hostage_psychology.derivatives`
+  is not tunable from config; only the rates, the initial state and the kindness
+  schedule are. §7 says so.
+- **The syndrome→patience map is a declared assumption.**
+  `captor_discount_from_syndrome` is `clamp(base + gain * S)`, linear by
+  declaration, not fitted. It is the only cross-pillar data dependency in the
+  package, so it carries real weight in §3.5 and must stay labelled as an
+  assumption until bargaining-under-duress data exists.
+- **Tamper loss is an upper bound in kbbl.** Accepted while E1 is open; the
+  rated-vs-carried distinction and the volume-vs-rate unit are stated in
+  `manuscript/03_results.md` and `07_scope_and_related_work.md`, and
+  `RESULT_TOKEN_UNITS` makes re-labelling it `kbbl/day` fail hydration.
+- **Blackout magnitude is a conservative lower bound** (sequential cascade,
+  see E3) and the trip *sequence* is one deterministic path, not a distribution.
+- **Sensor fusion consumes position fixes, not true bearings** (scale ambiguity,
+  see E4).
+- **Three datasets are not config-tunable by design:**
+  `pipeline_security.default_pipeline()`, `power_grid.default_power_grid()`, and
+  `pipeline_security.CHOKE_UTILIZATION_THRESHOLD`. `manuscript/05_experimental_setup.md`
+  marks their nine Table-1 rows `derived`, and the split is enforced in code via
+  `DECLARED_CONFIG_TOKENS` / `DERIVED_DATASET_TOKENS`.
+- **The `bond_api.MissionProvider` protocol is frozen.** Depth is added inside
+  the package (more plan steps, result keys, gadgets), never as a protocol
+  change. `mission.py` stays the only module importing `bond_api`; the domain
+  core must remain importable without it.
+- **Local-only.** No remote, nothing is pushed; commits are path-scoped inside
+  this package repo.
+
+## Verification
+
+All five must pass before a commit lands. Run from the package root.
 
 ```bash
 uv run pytest tests/ --cov=src --cov-fail-under=90
-uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/
+uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
 uv run mypy src/ scripts/
 uv run python scripts/z_generate_manuscript_variables.py   # strict token gate
 rg -n "template[_]code_project" . --glob '!uv.lock' --glob '!.git/**' || echo clean
 ```
 
-All five must pass before a commit lands. The coverage floor is 90%; the
-achieved figure is recorded in `docs/_generated/COUNTS.md`, not quoted here.
+Expected outcomes, as measured 2026-08-05:
+
+| Command | Expected |
+| --- | --- |
+| `pytest … --cov-fail-under=90` | `352 passed`, `Total coverage: 99.38%` (floor 90%) |
+| `ruff check` / `ruff format --check` | `All checks passed!` / `39 files already formatted` |
+| `mypy src/ scripts/` | `Success: no issues found in 17 source files` |
+| `z_generate_manuscript_variables.py` | `Resolved 76 manuscript variables -> output/data/manuscript_variables.json`, exit 0 |
+| lineage grep | `clean` |
+| `git status --short` | empty after commit |
+
+If `uv` reports `Failed to initialize cache at ~/.cache/uv` that is a sandbox
+restriction, not a package failure — re-run the same command with the sandbox
+disabled. Re-measure rather than quoting: the headline numbers above and in
+`docs/_generated/COUNTS.md` are only valid until the next change.
