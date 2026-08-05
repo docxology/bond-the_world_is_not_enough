@@ -109,7 +109,7 @@ Every module in `src/the_world_is_not_enough/`, one line each:
 | `negotiation_tactics.py` | Rubinstein alternating-offer equilibrium, the syndrome→captor-patience mapping, and a concession model resolving to settlement, deadline lapse, or stalemate. Pure. |
 | `sensor_fusion.py` | Constant-velocity linear Kalman filter over seeded noisy position fixes; RMSE against the raw-measurement baseline, final error, convergence. Pure. |
 | `figures.py` | The four deterministic concept figures, rendered headless (`Agg`), no timestamps. |
-| `manuscript_variables.py` | `{{TOKEN}}` hydration: reads `manuscript/config.yaml`, runs the models, formats `CONFIG_*` and `RESULT_*` tokens, and refuses blank or non-finite values. |
+| `manuscript_variables.py` | `{{TOKEN}}` hydration: reads `manuscript/config.yaml`, runs the models, formats `CONFIG_*` and `RESULT_*` tokens, and refuses blank or non-finite values. No token reads a clock — `MANUSCRIPT_EDITION_STAMP` comes from the committed `paper.date`, so regenerating `output/` twice is byte-identical (enforced by `TestRegenerationDeterminism`). |
 | `mission.py` | The BOND-API adapter — `MissionProvider` plus the `GADGETS` registry. The only module importing `bond_api`. |
 
 ```
