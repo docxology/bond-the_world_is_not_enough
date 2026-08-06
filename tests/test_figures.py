@@ -25,6 +25,24 @@ class TestIndividualFigures:
         assert path.is_file()
         assert path.stat().st_size > 0
 
+    def test_pipeline_network_with_a_revisited_node(self, tmp_path: Path) -> None:
+        """Drive the BFS depth-layout 'already seen' arm with a diamond."""
+        network = pipeline_security.PipelineNetwork(
+            source="S",
+            sink="T",
+            edges=[
+                pipeline_security.PipelineEdge("S", "A", 5.0),
+                pipeline_security.PipelineEdge("S", "B", 5.0),
+                pipeline_security.PipelineEdge("A", "C", 5.0),
+                pipeline_security.PipelineEdge("B", "C", 5.0),
+                pipeline_security.PipelineEdge("C", "T", 10.0),
+            ],
+        )
+        analysis = pipeline_security.analyze_choke_points(network)
+        path = F.figure_pipeline_network(network, analysis, tmp_path / "diamond.png")
+        assert path.is_file()
+        assert path.stat().st_size > 0
+
     def test_submarine_detection(self, tmp_path: Path) -> None:
         sensors = tuple(
             sub_defense.Sensor(

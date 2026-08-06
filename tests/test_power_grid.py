@@ -211,6 +211,43 @@ class TestCascadeFailure:
         assert a == b
         assert a["tripped"] == b["tripped"]
 
+    def test_cascade_that_exhausts_every_line(self) -> None:
+        """Drive the 'no surviving line' termination arm of the cascade."""
+        # Two parallel interconnectors; tripping the first overloads and trips
+        # the second, emptying the active set.
+        grid = PG.PowerGrid(
+            n_buses=2,
+            lines=[
+                PG.GridLine(0, 1, 5.0, 10.0),
+                PG.GridLine(1, 0, 5.0, 10.0),
+            ],
+            injections=[50.0, -50.0],
+            slack_bus=0,
+        )
+        outcome = PG.cascade_failure(grid, "0->1")
+        assert outcome["tripped"] == ("0->1", "1->0")
+        assert outcome["surviving_lines"] == ()
+        # both buses islanded from the slack -> full blackout
+        assert outcome["lost_load_mw"] == pytest.approx(50.0)
+        assert outcome["blackout_fraction"] == pytest.approx(1.0)
+
+    def test_max_steps_cap_is_honoured(self) -> None:
+        """Drive the max_steps-exhausted loop exit (no stable signal)."""
+        ring = PG.PowerGrid(
+            n_buses=3,
+            lines=[
+                PG.GridLine(0, 1, 5.0, 30.0),
+                PG.GridLine(1, 2, 5.0, 30.0),
+                PG.GridLine(2, 0, 5.0, 30.0),
+            ],
+            injections=[100.0, -50.0, -50.0],
+            slack_bus=0,
+        )
+        outcome = PG.cascade_failure(ring, "0->1", max_steps=1)
+        assert outcome["steps"] == 1
+        # the cap limited the loop before any 'stable' signal
+        assert outcome["stable"] is False
+
 
 class TestFingerprint:
     def test_stable_and_distinct(self) -> None:

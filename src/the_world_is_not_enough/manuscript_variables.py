@@ -24,6 +24,7 @@ import datetime as _dt
 import math
 import platform
 import re
+from dataclasses import dataclass as _dc
 from pathlib import Path
 from typing import Any, cast
 
@@ -41,9 +42,15 @@ from the_world_is_not_enough import (
 __all__ = [
     "DECLARED_CONFIG_TOKENS",
     "DERIVED_DATASET_TOKENS",
+    "MISSION_CODENAME",
+    "MISSION_FILM",
     "RESULT_TOKEN_UNITS",
+    "build_mission_scenario",
     "edition_stamp",
     "generate_variables",
+    "hostage_initial_state",
+    "hostage_params",
+    "kindness_events",
     "load_manuscript_config",
     "resolve_manuscript_tree",
 ]
@@ -168,47 +175,80 @@ def _fmt(value: float, precision: int = 3) -> str:
     return f"{value:.{precision}f}"
 
 
+_HOSTAGE_RATE_NAMES = (
+    "fear_decay",
+    "threat_sensitivity",
+    "kindness_gain",
+    "gratitude_decay",
+    "ident_gain",
+    "fear_suppress",
+    "threat_initial",
+    "threat_decay",
+    "threat_floor",
+)
+
+
+#: Keys consumed by the shared scenario builder (dotted ``where.key`` form),
+#: recorded by :func:`_require` during :func:`build_mission_scenario` and
+#: asserted against the config's every leaf by tests (the completeness half of
+#: the config<>adapter contract — see ``test_the_scenario_consumes_every_config_leaf``).
+_CONSUMED_CONFIG_KEYS: set[str] = set()
+
+
+def _require(mapping: dict[Any, Any], key: str, where: str) -> Any:
+    """Fail-closed config read: a missing ``key`` raises instead of defaulting.
+
+    The accessor used where the manuscript claims a value is *typed in
+    ``config.yaml``*. A silently-implicit default would let a maintainer delete
+    a knob and change nothing while the manuscript still claimed it was
+    consumed — exactly the fail-open hole this round closes.
+    """
+    _CONSUMED_CONFIG_KEYS.add(f"{where}.{key}")
+    try:
+        return mapping[key]
+    except (KeyError, IndexError, TypeError) as exc:
+        raise KeyError(
+            f"missing required config key {key!r} in {where} — it is typed in "
+            "manuscript/config.yaml and consumed by the model; delete it only "
+            "on purpose"
+        ) from exc
+
+
 def hostage_params(hostage_cfg: dict[str, Any]) -> hostage_psychology.DynamicsParams:
     """Build the ODE rate block from ``experiment.hostage.dynamics``.
 
-    Every rate constant of the hostage model is declared in
-    ``manuscript/config.yaml``; the dataclass defaults are the fallback for a
-    config that omits the block, not the authority.
+    Fails *closed*: every one of the nine rates is required. Deleting one
+    raises ``KeyError`` rather than silently falling back to a module default,
+    so ``manuscript/config.yaml`` is the single authority and a deleted knob
+    cannot pass unnoticed (C2).
     """
     rates = hostage_cfg.get("dynamics", {}) or {}
     if not isinstance(rates, dict):
         raise TypeError("experiment.hostage.dynamics must be a mapping")
-    default = hostage_psychology.DynamicsParams()
-    return hostage_psychology.DynamicsParams(
-        **{
-            name: float(rates.get(name, getattr(default, name)))
-            for name in (
-                "fear_decay",
-                "threat_sensitivity",
-                "kindness_gain",
-                "gratitude_decay",
-                "ident_gain",
-                "fear_suppress",
-                "threat_initial",
-                "threat_decay",
-                "threat_floor",
-            )
-        }
-    )
+    values = {
+        name: float(_require(rates, name, "experiment.hostage.dynamics"))
+        for name in _HOSTAGE_RATE_NAMES
+    }
+    return hostage_psychology.DynamicsParams(**values)
 
 
 def kindness_events(
     hostage_cfg: dict[str, Any],
 ) -> tuple[hostage_psychology.KindnessEvent, ...]:
-    """Build the small-kindness impulse train from ``experiment.hostage``."""
-    raw = hostage_cfg.get("kindness_events")
-    if raw is None:
-        return hostage_psychology.DEFAULT_KINDNESS_EVENTS
+    """Build the small-kindness impulse train from ``experiment.hostage``.
+
+    Fails *closed* when the schedule is absent (it is typed in
+    ``manuscript/config.yaml``).
+    """
+    raw = _require(hostage_cfg, "kindness_events", "experiment.hostage")
     if not isinstance(raw, list):
         raise TypeError("experiment.hostage.kindness_events must be a list")
     return tuple(
         hostage_psychology.KindnessEvent(
-            day=float(item["day"]), magnitude=float(item["magnitude"])
+            day=float(_require(item, "day", "experiment.hostage.kindness_events")),
+            magnitude=float(
+                _require(item, "magnitude", "experiment.hostage.kindness_events")
+            ),
         )
         for item in raw
     )
@@ -217,15 +257,196 @@ def kindness_events(
 def hostage_initial_state(
     hostage_cfg: dict[str, Any],
 ) -> tuple[float, float, float]:
-    """Read the initial ``(fear, gratitude, identification)`` state."""
-    raw = hostage_cfg.get("initial_state")
-    if raw is None:
-        return hostage_psychology.DEFAULT_INITIAL_STATE
+    """Read the initial ``(fear, gratitude, identification)`` state.
+
+    Fails *closed* when the initial state is absent (it is typed in
+    ``manuscript/config.yaml``).
+    """
+    raw = _require(hostage_cfg, "initial_state", "experiment.hostage")
     if not isinstance(raw, list) or len(raw) != 3:
         raise TypeError(
             "experiment.hostage.initial_state must be a list of three fractions"
         )
     return (float(raw[0]), float(raw[1]), float(raw[2]))
+
+
+@_dc(frozen=True)
+class MissionScenario:
+    """Every *tunable* mission input, resolved once from ``manuscript/config.yaml``.
+
+    The single source of truth for both the manuscript and the mission adapter:
+    :func:`mission.MissionProvider` and :func:`_run_domain_tokens` both consume
+    this, so editing a knob in ``manuscript/config.yaml`` moves the mission, the
+    figures, and the manuscript token together. Building it fails *closed*: a
+    deleted or mis-typed key raises rather than silently defaulting.
+    """
+
+    seed: int
+    tamper_events: int
+    detection_probability: float
+    submarine_grid: int
+    submarine_step_m: float
+    submarine_start: tuple[int, int]
+    submarine_goal: tuple[int, int]
+    submarine_sensors: tuple[sub_defense.Sensor, ...]
+    hostage_days: float
+    hostage_dt: float
+    hostage_onset: float
+    hostage_params: hostage_psychology.DynamicsParams
+    hostage_events: tuple[hostage_psychology.KindnessEvent, ...]
+    hostage_initial: tuple[float, float, float]
+    grid_outage: str
+    grid_overload_factor: float
+    negotiation_params: negotiation_tactics.NegotiationParams
+    fusion_config: sensor_fusion.TrackConfig
+
+
+def _experiment_block(config: dict[str, Any]) -> dict[str, Any]:
+    """The ``experiment`` section, resolving it fail-closed from the config."""
+    if "experiment" not in config:
+        raise KeyError(
+            "manuscript config is missing the 'experiment' block — the mission "
+            "and manuscript both consume it; a deleted block is a defect"
+        )
+    experiment = config["experiment"]
+    if not isinstance(experiment, dict):
+        raise TypeError("manuscript config 'experiment' section must be a mapping")
+    return experiment
+
+
+def build_mission_scenario(
+    config: dict[str, Any] | None = None,
+) -> MissionScenario:
+    """Resolve every tunable mission input from the config (fail-closed).
+
+    Reads ``manuscript/config.yaml`` (or an explicit config dict) and, for each
+    input the mission and manuscript share, *requires* the declared key rather
+    than defaulting. The only non-tunable datasets (the pipeline graph and the
+    power grid) come from their module datasets and are **not** read here, in
+    keeping with the declared/derived partition §5 of the manuscript draws.
+    """
+    _CONSUMED_CONFIG_KEYS.clear()
+    loaded = load_manuscript_config() if config is None else config
+    experiment = _experiment_block(loaded)
+    seed = int(_require(experiment, "seed", "experiment"))
+
+    pipeline_cfg = _require(experiment, "pipeline", "experiment")
+    if not isinstance(pipeline_cfg, dict):
+        raise TypeError("experiment.pipeline must be a mapping")
+    tamper_events = int(_require(pipeline_cfg, "tamper_events", "experiment.pipeline"))
+    detection_probability = float(
+        _require(pipeline_cfg, "detection_probability", "experiment.pipeline")
+    )
+
+    submarine_cfg = _require(experiment, "submarine", "experiment")
+    if not isinstance(submarine_cfg, dict):
+        raise TypeError("experiment.submarine must be a mapping")
+    grid_size = int(_require(submarine_cfg, "grid_size", "experiment.submarine"))
+    step_m = float(_require(submarine_cfg, "step_m", "experiment.submarine"))
+    raw_start = _require(submarine_cfg, "start", "experiment.submarine")
+    raw_goal = _require(submarine_cfg, "goal", "experiment.submarine")
+    if len(raw_start) != 2 or len(raw_goal) != 2:
+        raise TypeError("experiment.submarine start/goal must be (x, y) pairs")
+    start = (int(raw_start[0]), int(raw_start[1]))
+    goal = (int(raw_goal[0]), int(raw_goal[1]))
+    raw_sensors = _require(submarine_cfg, "sensors", "experiment.submarine")
+    sensors = tuple(
+        sub_defense.Sensor(
+            x=int(_require(s, "x", "experiment.submarine.sensors")),
+            y=int(_require(s, "y", "experiment.submarine.sensors")),
+            source_level=float(
+                _require(s, "source_level", "experiment.submarine.sensors")
+            ),
+            noise_level=float(
+                _require(s, "noise_level", "experiment.submarine.sensors")
+            ),
+            absorption_db_per_km=float(
+                _require(s, "absorption_db_per_km", "experiment.submarine.sensors")
+            ),
+            detection_threshold_db=float(
+                _require(s, "detection_threshold_db", "experiment.submarine.sensors")
+            ),
+        )
+        for s in raw_sensors
+    )
+
+    hostage_cfg = _require(experiment, "hostage", "experiment")
+    if not isinstance(hostage_cfg, dict):
+        raise TypeError("experiment.hostage must be a mapping")
+    hostage_days = float(_require(hostage_cfg, "days", "experiment.hostage"))
+    hostage_dt = float(_require(hostage_cfg, "dt", "experiment.hostage"))
+    hostage_onset = float(
+        _require(hostage_cfg, "onset_threshold", "experiment.hostage")
+    )
+
+    power_cfg = _require(experiment, "power_grid", "experiment")
+    if not isinstance(power_cfg, dict):
+        raise TypeError("experiment.power_grid must be a mapping")
+    outage = str(_require(power_cfg, "initial_outage", "experiment.power_grid"))
+    overload_factor = float(
+        _require(power_cfg, "overload_factor", "experiment.power_grid")
+    )
+
+    negotiation_cfg = _require(experiment, "negotiation", "experiment")
+    if not isinstance(negotiation_cfg, dict):
+        raise TypeError("experiment.negotiation must be a mapping")
+    negotiation = negotiation_tactics.NegotiationParams(
+        deadline_days=float(
+            _require(negotiation_cfg, "deadline_days", "experiment.negotiation")
+        ),
+        negotiator_discount=float(
+            _require(negotiation_cfg, "negotiator_discount", "experiment.negotiation")
+        ),
+        concession_rate=float(
+            _require(negotiation_cfg, "concession_rate", "experiment.negotiation")
+        ),
+        captor_discount_base=float(
+            _require(negotiation_cfg, "captor_discount_base", "experiment.negotiation")
+        ),
+        captor_discount_gain=float(
+            _require(negotiation_cfg, "captor_discount_gain", "experiment.negotiation")
+        ),
+        initial_demand=float(
+            _require(negotiation_cfg, "initial_demand", "experiment.negotiation")
+        ),
+        initial_offer=float(
+            _require(negotiation_cfg, "initial_offer", "experiment.negotiation")
+        ),
+    )
+
+    fusion_cfg = _require(experiment, "fusion", "experiment")
+    if not isinstance(fusion_cfg, dict):
+        raise TypeError("experiment.fusion must be a mapping")
+    fusion = sensor_fusion.TrackConfig(
+        dt=float(_require(fusion_cfg, "dt", "experiment.fusion")),
+        steps=int(_require(fusion_cfg, "steps", "experiment.fusion")),
+        process_noise=float(_require(fusion_cfg, "process_noise", "experiment.fusion")),
+        measurement_noise=float(
+            _require(fusion_cfg, "measurement_noise", "experiment.fusion")
+        ),
+        seed=int(_require(fusion_cfg, "seed", "experiment.fusion")),
+    )
+
+    return MissionScenario(
+        seed=seed,
+        tamper_events=tamper_events,
+        detection_probability=detection_probability,
+        submarine_grid=grid_size,
+        submarine_step_m=step_m,
+        submarine_start=start,
+        submarine_goal=goal,
+        submarine_sensors=sensors,
+        hostage_days=hostage_days,
+        hostage_dt=hostage_dt,
+        hostage_onset=hostage_onset,
+        hostage_params=hostage_params(hostage_cfg),
+        hostage_events=kindness_events(hostage_cfg),
+        hostage_initial=hostage_initial_state(hostage_cfg),
+        grid_outage=outage,
+        grid_overload_factor=overload_factor,
+        negotiation_params=negotiation,
+        fusion_config=fusion,
+    )
 
 
 def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:

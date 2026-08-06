@@ -532,12 +532,47 @@ class TestHostageParametersAreReallyConfigured:
         }
         assert moved, f"{knob} is declared in config.yaml but consumed by nothing"
 
-    def test_omitting_the_block_falls_back_to_the_module_defaults(self) -> None:
-        from the_world_is_not_enough import hostage_psychology
+    def test_a_deleted_rate_fails_closed(self) -> None:
+        """C2: a missing rate raises rather than silently defaulting.
 
-        assert MV.hostage_params({}) == hostage_psychology.DynamicsParams()
-        assert MV.kindness_events({}) == hostage_psychology.DEFAULT_KINDNESS_EVENTS
-        assert MV.hostage_initial_state({}) == hostage_psychology.DEFAULT_INITIAL_STATE
+        The hostage accessors used to fall back to module defaults (identical
+        to the config values), so deleting `fear_decay` changed no output and
+        no test went red. They now fail closed: `manuscript/config.yaml` is the
+        single authority and a deleted knob cannot pass unnoticed.
+        """
+        missing = dict(MV.load_manuscript_config()["experiment"]["hostage"])
+        del missing["dynamics"]["fear_decay"]
+        with pytest.raises(KeyError, match="fear_decay"):
+            MV.hostage_params(missing)
+
+    def test_a_deleted_kindness_schedule_fails_closed(self) -> None:
+        missing = dict(MV.load_manuscript_config()["experiment"]["hostage"])
+        del missing["kindness_events"]
+        with pytest.raises(KeyError, match="kindness_events"):
+            MV.kindness_events(missing)
+
+    def test_a_deleted_initial_state_fails_closed(self) -> None:
+        missing = dict(MV.load_manuscript_config()["experiment"]["hostage"])
+        del missing["initial_state"]
+        with pytest.raises(KeyError, match="initial_state"):
+            MV.hostage_initial_state(missing)
+
+    def test_the_experiment_block_is_required(self) -> None:
+        """The shared scenario builder refuses a config with no `experiment:`."""
+        config = MV.load_manuscript_config()
+        del config["experiment"]
+        with pytest.raises(KeyError, match="experiment"):
+            MV.build_mission_scenario(config)
+
+    @pytest.mark.parametrize("rate", HOSTAGE_RATES)
+    def test_deleting_any_single_rate_fails_closed(self, rate: str) -> None:
+        """Every one of the nine declared rates is individually required."""
+        config = MV.load_manuscript_config()
+        del config["experiment"]["hostage"]["dynamics"][rate]
+        with pytest.raises(KeyError, match=rate):
+            MV.generate_variables(
+                config_path=ROOT / "_staging_deleted_rate.yaml"
+            ) if False else MV.build_mission_scenario(config)
 
     def test_malformed_blocks_are_refused(self) -> None:
         with pytest.raises(TypeError, match="dynamics"):
@@ -546,6 +581,51 @@ class TestHostageParametersAreReallyConfigured:
             MV.kindness_events({"kindness_events": "not-a-list"})
         with pytest.raises(TypeError, match="initial_state"):
             MV.hostage_initial_state({"initial_state": [0.1, 0.2]})
+
+
+class TestSharedScenarioBuilder:
+    """Hostile coverage of the `build_mission_scenario` validation arms.
+
+    The scenario builder is the single source of truth for the mission and the
+    manuscript, so *every* malformed-input guard must be proven reachable with
+    a real (bad) config — not by an unreachable defensive branch.
+    """
+
+    @staticmethod
+    def _with(config: dict[str, Any], path: list[str], value: Any) -> dict[str, Any]:
+        target: Any = config
+        for key in path[:-1]:
+            target = target[key]
+        target[path[-1]] = value
+        return config
+
+    def test_deleted_experiment_block_raises(self) -> None:
+        with pytest.raises(KeyError, match="experiment"):
+            MV.build_mission_scenario({"paper": {"title": "x"}})
+
+    @pytest.mark.parametrize(
+        ("path", "msg"),
+        [
+            (["experiment"], "mapping"),
+            (["experiment", "pipeline"], "pipeline"),
+            (["experiment", "submarine"], "submarine"),
+            (["experiment", "hostage"], "hostage"),
+            (["experiment", "power_grid"], "power_grid"),
+            (["experiment", "negotiation"], "negotiation"),
+            (["experiment", "fusion"], "fusion"),
+        ],
+    )
+    def test_non_mapping_section_raises(self, tmp_path: Path, path, msg) -> None:
+        config = MV.load_manuscript_config()
+        self._with(config, path, "not-a-mapping")
+        with pytest.raises(TypeError, match=msg):
+            MV.build_mission_scenario(config)
+
+    def test_bad_submarine_start_pair_raises(self) -> None:
+        config = MV.load_manuscript_config()
+        config["experiment"]["submarine"]["start"] = [1]
+        with pytest.raises(TypeError, match="x, y"):
+            MV.build_mission_scenario(config)
 
 
 class TestSetupTableSourceColumn:

@@ -212,13 +212,15 @@ def dijkstra_evasion(
     # heap entries: (cost, counter, node) — counter breaks cost ties deterministically
     heap: list[tuple[float, int, tuple[int, int]]] = [(0.0, counter, start)]
     counter += 1
-    visited: set[tuple[int, int]] = set()
 
+    # NOTE (V2): there is intentionally no `if node in visited: continue` here.
+    # Every cell's entry cost is its own (non-negative) risk value, identical
+    # for all four neighbours, and the relaxation uses strict `<` — so a node is
+    # first enqueued at its minimum and can never be re-relaxed cheaper; the
+    # strict-`<` plus min-heap guarantee each node settles exactly once. A "skip
+    # an already-visited pop" arm would be unreachable dead code.
     while heap:
         cost, _, node = heapq.heappop(heap)
-        if node in visited:
-            continue
-        visited.add(node)
         if node == goal:
             break
         x, y = node

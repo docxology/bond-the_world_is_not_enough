@@ -51,6 +51,30 @@ runs a measurability gate (`_assert_measurable`) that rejects any blank or
 non-finite result token, so a degenerate model run fails the build instead of
 rendering `nan` as a measured value.
 
+## Verification gates
+
+The package's hard rules are enforced by tests, not by convention:
+
+- **Single source of truth.** The mission adapter and the manuscript read the
+  same `experiment:` block through one shared builder
+  (`manuscript_variables.build_mission_scenario()`); the builder records every
+  key it consumes and a completeness test walks the config asserting each leaf
+  is consumed, so a knob added to `config.yaml` but read by nothing turns the
+  suite red.
+- **Fail-closed config.** The config accessors raise `KeyError` on a missing
+  required key instead of silently defaulting — deleting one of the nine
+  hostage rates, the initial state, the kindness schedule, or a whole pillar
+  block is caught by a negative-control test for each.
+- **Coverage.** `uv run pytest tests/ --cov=src --cov-fail-under=90` enforces
+  ≥90% line + branch coverage; the suite currently sits at 100% with every
+  validation arm exercised by a real (malformed) input.
+- **Zero mocks / zero lineage.** `tests/test_guardrails.py` walks `src/`,
+  `scripts/` and `tests/` and fails on any mock-framework pattern or the
+  template-lineage string, with a positive control proving each matcher fires.
+- **COUNTS freshness.** `tests/test_counts_staleness.py` re-derives the
+  structural rows of `docs/_generated/COUNTS.md` from live objects, so a
+  stale count fails the suite.
+
 ## Artifact inventory
 
 | Artifact | Path | Regenerable |

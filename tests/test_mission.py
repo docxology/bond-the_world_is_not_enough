@@ -8,6 +8,7 @@ slug-based discovery.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 from bond_api.discovery import load_provider
@@ -118,64 +119,65 @@ class TestExecute:
         assert h1 == h2
         assert len(h1) == 64  # sha256 hex
 
-    def test_every_mirrored_constant_equals_its_config_key(self) -> None:
-        """Bind each `mission.py` constant to the config key it mirrors.
+    def test_the_scenario_consumes_every_config_leaf(self) -> None:
+        """V1/C1: every `experiment:` leaf is consumed by the shared scenario.
 
-        `docs/architecture.md` says the adapter constants mirror the
-        `experiment:` block "so the mission and the manuscript measure the same
-        run". Nothing enforced that: editing `config.yaml` to
-        `tamper_events: 41` left the whole suite green while the adapter still
-        ran 40. Every mirrored value is now pinned here, so the convention is a
-        checked guarantee rather than an unenforced comment.
+        The adapter used to restate every knob as a module constant, held in
+        check by a hand-written mirror test that could not see an *added*,
+        unmapped config key. That restatement is gone: `mission.py` now builds
+        its inputs from `manuscript_variables.build_mission_scenario()`, the
+        *single* reader of the `experiment:` block. This test supplies the
+        completeness half the mirror could not: it walks the config's leaf
+        paths (list indices normalised away) and asserts the scenario builder
+        read every one, so an un-consumed key turns the suite red.
         """
         from the_world_is_not_enough import manuscript_variables as MV
 
-        exp = MV.load_manuscript_config()["experiment"]
-        assert mission.SEED == exp["seed"]
-        assert mission._TAMPER_EVENTS == exp["pipeline"]["tamper_events"]
-        assert mission._DETECT_PROB == exp["pipeline"]["detection_probability"]
+        config = MV.load_manuscript_config()
+        MV.build_mission_scenario(config)
+        consumed = MV._CONSUMED_CONFIG_KEYS
 
-        sub = exp["submarine"]
-        assert mission._SUB_GRID == sub["grid_size"]
-        assert mission._SUB_STEP_M == sub["step_m"]
-        assert list(mission._SUB_START) == sub["start"]
-        assert list(mission._SUB_GOAL) == sub["goal"]
-        assert len(mission._SUB_SENSORS) == len(sub["sensors"])
-        for sensor, declared in zip(mission._SUB_SENSORS, sub["sensors"], strict=True):
-            assert (sensor.x, sensor.y) == (declared["x"], declared["y"])
-            assert sensor.source_level == declared["source_level"]
-            assert sensor.noise_level == declared["noise_level"]
-            assert sensor.absorption_db_per_km == declared["absorption_db_per_km"]
-            assert sensor.detection_threshold_db == declared["detection_threshold_db"]
+        def leaves(node: Any, prefix: str = "experiment") -> set[str]:
+            """Every leaf dotted-path in ``experiment:``, list indices removed.
 
-        hostage = exp["hostage"]
-        assert mission._HOSTAGE_DAYS == hostage["days"]
-        assert mission._HOSTAGE_DT == hostage["dt"]
-        assert mission._HOSTAGE_ONSET == hostage["onset_threshold"]
-        # The rate block, kindness schedule and initial state the adapter runs
-        # must be the ones the manuscript declares (§5 Table 2).
-        assert mission._HOSTAGE_PARAMS == MV.hostage_params(hostage)
-        assert mission._HOSTAGE_EVENTS == MV.kindness_events(hostage)
-        assert mission._HOSTAGE_INITIAL == MV.hostage_initial_state(hostage)
+            A config ``sensors`` list contributes one canonical path per field
+            (``experiment.submarine.sensors.x``), matching how the builder
+            records its reads, so list *shape* never trips the guard.
+            """
+            out: set[str] = set()
+            for key, value in node.items():
+                here = f"{prefix}.{key}"
+                if isinstance(value, dict):
+                    out |= leaves(value, here)
+                elif isinstance(value, list):
+                    for element in value:
+                        if isinstance(element, dict):
+                            out |= leaves(element, here)
+                        else:
+                            out.add(here)
+                else:
+                    out.add(here)
+            return out
 
-        assert mission._GRID_OUTAGE == exp["power_grid"]["initial_outage"]
-        assert mission._GRID_OVERLOAD_FACTOR == exp["power_grid"]["overload_factor"]
+        declared = leaves(config["experiment"])
+        canonical: set[str] = set()
+        for path in declared:
+            parts = [p for p in path.split(".") if not p.isdigit()]
+            canonical.add(".".join(parts))
 
-        neg = exp["negotiation"]
-        assert mission._NEGOTIATION.deadline_days == neg["deadline_days"]
-        assert mission._NEGOTIATION.negotiator_discount == neg["negotiator_discount"]
-        assert mission._NEGOTIATION.concession_rate == neg["concession_rate"]
-        assert mission._NEGOTIATION.captor_discount_base == neg["captor_discount_base"]
-        assert mission._NEGOTIATION.captor_discount_gain == neg["captor_discount_gain"]
-        assert mission._NEGOTIATION.initial_demand == neg["initial_demand"]
-        assert mission._NEGOTIATION.initial_offer == neg["initial_offer"]
+        missing = canonical - consumed
+        assert not missing, (
+            f"config leaves not consumed by build_mission_scenario: {sorted(missing)}"
+        )
 
-        fusion = exp["fusion"]
-        assert mission._FUSION.dt == fusion["dt"]
-        assert mission._FUSION.steps == fusion["steps"]
-        assert mission._FUSION.process_noise == fusion["process_noise"]
-        assert mission._FUSION.measurement_noise == fusion["measurement_noise"]
-        assert mission._FUSION.seed == fusion["seed"]
+    def test_the_scenario_rejects_a_degenerate_leaf(self) -> None:
+        """A leaf that turns into an invalid model input fails closed."""
+        from the_world_is_not_enough import manuscript_variables as MV
+
+        config = MV.load_manuscript_config()
+        del config["experiment"]["submarine"]["sensors"]
+        with pytest.raises(KeyError, match="sensors"):
+            MV.build_mission_scenario(config)
 
     def test_mission_and_manuscript_measure_the_same_run(self) -> None:
         """The adapter mirrors `manuscript/config.yaml` — assert it, don't assume it.

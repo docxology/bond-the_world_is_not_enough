@@ -205,12 +205,15 @@ Supporting pieces:
   executions of the same mission hash identically; this is what makes
   `test_mission.py::TestExecute::test_deterministic` a real assertion rather
   than a tautology.
-- Module constants `_PIPELINE`, `_SUB_SENSORS`, `_GRID`, `_NEGOTIATION`,
-  `_FUSION`, … mirror the `experiment:` block of `manuscript/config.yaml`, so
-  the mission and the manuscript measure the same run. The public identity
-  constants are `CODENAME`, `FILM`, `SEED` and `PACKAGE_VERSION`;
-  `tests/test_mission.py` asserts the mission's measured results equal the
-  manuscript's tokens, so the mirroring cannot drift silently.
+- The tunable mission inputs come from the *single source of truth*:
+  `mission._scenario()` resolves `manuscript_variables.build_mission_scenario()`
+  once (lazily, so `import mission` never reads the manuscript tree) and every
+  pillar step consumes that scenario object — there are no restated constants
+  left to drift. The public identity constants are `CODENAME`, `FILM`, `SEED`
+  and `PACKAGE_VERSION`. `tests/test_mission.py` asserts both that the
+  scenario builder consumes *every* config leaf (a knob added but not read
+  turns the suite red) and that the mission's measured results equal the
+  manuscript's tokens.
 - `GADGETS: GadgetRegistry` — built at import by `_build_gadgets()` and
   registering eight callables under the film slug: `pipeline_analysis`,
   `tamper_simulation`, `evasion_analysis`, `hostage_dynamics`,
@@ -224,7 +227,9 @@ mission epoch, so no clock value ever reaches a result.
 
 `manuscript_variables.py` exposes `load_manuscript_config()` and
 `generate_variables()`, which reads `manuscript/config.yaml` and *runs the
-domain models* to compute every `{{TOKEN}}`:
+domain models* to compute every `{{TOKEN}}`. Its stable identity and mission
+constants are `MISSION_CODENAME` (``ELEKTRA``) and `MISSION_FILM`
+(``The World Is Not Enough (1999)``):
 
 - `_declared_config_tokens()` → the `CONFIG_*` values **typed by the author**
   in the config file; their names are pinned in `DECLARED_CONFIG_TOKENS`.
@@ -233,10 +238,23 @@ domain models* to compute every `{{TOKEN}}`:
   `CHOKE_UTILIZATION_THRESHOLD`) — derived, never typed, and unmovable from
   the config file; pinned in `DERIVED_DATASET_TOKENS`. `_config_tokens()`
   merges the two, and §5 of the manuscript labels each row with which it is.
+- `build_mission_scenario()` → the **single source of truth** for every
+  tunable mission input. It reads `manuscript/config.yaml` and returns a
+  `MissionScenario` dataclass (seed, tamper events/probability, submarine
+  grid/step/sensors, hostage horizon/dt/params/events/initial state, grid
+  outage/overload factor, negotiation params, fusion config). Both
+  `mission._run_steps()` **and** the manuscript's `_run_domain_tokens()`
+  consume one scenario object from this builder, so a knob edited in
+  `config.yaml` moves the mission, the figures, and the manuscript together —
+  the mirror test that used to hold `mission.py`'s restated constants in
+  check is obsolete (C1). It fails closed: a deleted or mis-typed key raises
+  `KeyError` rather than defaulting (C2).
 - `hostage_params()`, `kindness_events()`, `hostage_initial_state()` → build
   the hostage model's whole parameter surface from
   `experiment.hostage`, so the rate constants the manuscript declares as its
   modelling assumption are genuinely config-driven rather than hardcoded.
+  All three **fail closed**: a missing rate/schedule/initial state raises
+  `KeyError` instead of silently falling back to a module default (C2).
 - `_run_domain_tokens()` → the `RESULT_*` family (measured outputs).
 - `RESULT_TOKEN_UNITS` → the declared physical unit of every result token, and
   `_assert_units_consistent()` → the unit gate: an undeclared token, or a

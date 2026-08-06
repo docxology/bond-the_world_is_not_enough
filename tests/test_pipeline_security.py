@@ -174,6 +174,34 @@ class TestMinCut:
         assert capacity == pytest.approx(60.0)
         assert {e.id for e in cut} == {"A->T", "B->T"}
 
+    def test_min_cut_dfs_visits_a_node_via_two_residual_paths(self) -> None:
+        """Drive the reachability-DFS 'already reached' arm of the min cut.
+
+        When the min cut is *downstream* of a diamond (``C->T`` is the
+        bottleneck), max flow leaves residual on *both* inbound edges to ``C``,
+        so the DFS pushes ``C`` twice and the second pop takes the
+        ``node in reachable`` skip. A naive DFS that double-counted ``C`` could
+        still sum the right capacity here (both edges leave the s-side), so this
+        binds the skip arm specifically, not just the answer.
+        """
+        net = P.PipelineNetwork(
+            source="S",
+            sink="T",
+            edges=[
+                P.PipelineEdge("S", "A", 5.0),
+                P.PipelineEdge("S", "B", 5.0),
+                P.PipelineEdge("A", "C", 5.0),
+                P.PipelineEdge("B", "C", 5.0),
+                P.PipelineEdge("C", "T", 3.0),  # the min cut: the one bottleneck
+            ],
+        )
+        max_flow = P.edmonds_karp(net)
+        cut, capacity = P.min_cut_edges(net)
+        assert max_flow == pytest.approx(3.0)
+        assert capacity == pytest.approx(3.0)
+        # exactly the downstream bottleneck crosses the cut
+        assert {e.id for e in cut} == {"C->T"}
+
 
 # ------------------------------------------------------------ betweenness
 class TestEdgeBetweenness:

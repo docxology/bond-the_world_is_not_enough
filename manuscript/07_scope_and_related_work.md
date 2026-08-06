@@ -81,5 +81,8 @@ and the small-kindness schedule are typed in `manuscript/config.yaml` under
 `experiment.hostage`, reproduced in §5 (Table 2), and consumed by the model —
 `tests/test_manuscript_variables.py` perturbs each one and asserts the reported
 syndrome index moves, so the exposure is auditable rather than decorative. The
-*form* of the equations, by contrast, is fixed in
+claim is also *enforced*: the config accessors fail closed, so deleting any one
+of the nine rates, the initial state, or the kindness schedule raises rather
+than silently reverting to a module default — a deleted knob cannot pass
+unnoticed. The *form* of the equations, by contrast, is fixed in
 `hostage_psychology.derivatives` and is not configurable.

@@ -2,7 +2,34 @@
 
 All numbers below are real outputs of the deterministic domain models
 (seed {{CONFIG_SEED}}), hydrated into this manuscript by
-`manuscript_variables.py` — none are hand-authored.
+`manuscript_variables.py` — none are hand-authored. Table 3 collects the six
+pillars' headline measured results; every cell is a live token that resolves
+identically to the mission outcome, so the same run the orchestrator executes
+is the same run this manuscript reports.
+
+## Table 3 — Headline measured results (live tokens)
+
+| Pillar | Headline result | Value |
+|---|---|---|
+| Pipeline security | Max flow (kbbl/day) | {{RESULT_MAX_FLOW}} |
+| Pipeline security | Min-cut capacity (kbbl/day) | {{RESULT_MIN_CUT_CAPACITY}} |
+| Pipeline security | Principal choke point | {{RESULT_TOP_CHOKE_POINT}} |
+| Pipeline security | Tamper detection rate (%) | {{RESULT_TAMPER_DETECTION_RATE}} |
+| Pipeline security | Cumulative tamper loss (kbbl) | {{RESULT_TAMPER_THROUGHPUT_LOST}} |
+| Submarine defense | Naive exposure | {{RESULT_NAIVE_EXPOSURE}} |
+| Submarine defense | Least-risk exposure | {{RESULT_OPTIMAL_EXPOSURE}} |
+| Submarine defense | Exposure reduction (%) | {{RESULT_EXPOSURE_REDUCTION}} |
+| Hostage psychology | Syndrome onset day | {{RESULT_SYNDROME_ONSET_DAY}} |
+| Hostage psychology | Final syndrome index | {{RESULT_SYNDROME_FINAL}} |
+| Hostage psychology | Influence ratio | {{RESULT_INFLUENCE_RATIO}} |
+| Energy infrastructure | Lost load (MW) | {{RESULT_BLACKOUT_LOST_MW}} |
+| Energy infrastructure | Blackout fraction | {{RESULT_BLACKOUT_FRACTION}} |
+| Negotiation | Settlement day | {{RESULT_NEG_SETTLEMENT_DAY}} |
+| Negotiation | Captor share of stake | {{RESULT_NEG_CAPTOR_SHARE}} |
+| Negotiation | Syndrome leverage (%) | {{RESULT_NEG_CAPTOR_LEVERAGE_PCT}} |
+| Sensor fusion | Track RMSE | {{RESULT_TRACK_RMSE}} |
+| Sensor fusion | Measurement RMSE | {{RESULT_TRACK_MEASUREMENT_RMSE}} |
+| Sensor fusion | Track gain (%) | {{RESULT_TRACK_GAIN}} |
 
 ## 3.1 Oil-pipeline choke-point security
 

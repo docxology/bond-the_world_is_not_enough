@@ -6,8 +6,8 @@ and do not let prose elsewhere in the package restate one.
 
 | Metric | Value |
 | --- | --- |
-| Test count (pytest, 0 failed / 0 skipped) | 362 |
-| Line + branch coverage on `src/` | 99.38% (gate: ≥90%) |
+| Test count (pytest, 0 failed / 0 skipped) | 405 |
+| Line + branch coverage on `src/` | 100.00% (gate: ≥90%) |
 | Coverage gate | `uv run pytest tests/ --cov=src --cov-fail-under=90` |
 | Mocks | 0 (no `unittest.mock` / `MagicMock` / `mocker.patch` / `monkeypatch`) |
 | Domain modules (pure) | 6 (`pipeline_security`, `sub_defense`, `hostage_psychology`, `power_grid`, `negotiation_tactics`, `sensor_fusion`) |

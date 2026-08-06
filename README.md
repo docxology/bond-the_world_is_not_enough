@@ -92,6 +92,7 @@ Programmatic mission execution:
 
 ```python
 from bond_api.discovery import load_provider
+
 provider = load_provider("the_world_is_not_enough", search_paths=["src"])
 print(provider.brief())
 ```

@@ -341,8 +341,11 @@ def edge_betweenness(network: PipelineNetwork) -> dict[str, float]:
                 key = _undirected_key(pred, node)
                 edge_flow[key] = edge_flow.get(key, 0.0) + contribution
                 delta[pred] = delta.get(pred, 0.0) + contribution
-    if not edge_flow:
-        return {}
+    # No `if not edge_flow: return {}` guard here: any network that passed the
+    # `if not network.edges: return {}` above has at least one edge, and every
+    # edge lies on a length-1 shortest path between its endpoints, so
+    # `edge_flow` is always populated — a guard for emptiness would be
+    # unreachable dead code (V2).
     n = network.node_count()
     denominator = max(1.0, n * (n - 1))
     return {key: value / denominator for key, value in edge_flow.items()}

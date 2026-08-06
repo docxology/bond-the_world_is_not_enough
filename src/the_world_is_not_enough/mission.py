@@ -22,6 +22,7 @@ added as extra plan steps, result keys, and gadgets, not as protocol changes.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 from typing import Any, cast
@@ -43,6 +44,7 @@ from bond_api.registry import GadgetRegistry
 
 from the_world_is_not_enough import (
     hostage_psychology,
+    manuscript_variables,
     negotiation_tactics,
     pipeline_security,
     power_grid,
@@ -66,86 +68,20 @@ CODENAME = "ELEKTRA"
 SEED = 1999  # the film's release year — the deterministic mission seed
 PACKAGE_VERSION = "0.1.0"
 
-# --- Fixed, deterministic mission inputs -------------------------------------
+# --- Fixed, deterministic mission inputs ------------------------------
+# The *datasets* are fixed module constants (they are derived, not typed in
+# config, per §5's declared/derived partition). Every *tunable* knob is read
+# once, lazily, from manuscript/config.yaml through
+# manuscript_variables.build_mission_scenario() — the single source of truth
+# for the mission and the manuscript (C1). Nothing here restates a config key.
 _PIPELINE = pipeline_security.default_pipeline()
-_TAMPER_EVENTS = 40
-_DETECT_PROB = 0.85
-
-_SUB_GRID = 16
-_SUB_STEP_M = 3000.0
-_SUB_START: tuple[int, int] = (1, 1)
-_SUB_GOAL: tuple[int, int] = (14, 14)
-# Passive-sonar parameters are physically plausible for a mid-frequency
-# broadband listen: SL 125 dB (target radiated noise), NL 78 dB (moderate sea
-# state + self), alpha 0.5 dB/km absorption, operator DT 15 dB.
-_SUB_SENSORS: tuple[sub_defense.Sensor, ...] = (
-    sub_defense.Sensor(
-        x=8,
-        y=3,
-        source_level=125.0,
-        noise_level=78.0,
-        absorption_db_per_km=0.5,
-        detection_threshold_db=15.0,
-    ),
-    sub_defense.Sensor(
-        x=3,
-        y=9,
-        source_level=125.0,
-        noise_level=78.0,
-        absorption_db_per_km=0.5,
-        detection_threshold_db=15.0,
-    ),
-    sub_defense.Sensor(
-        x=12,
-        y=12,
-        source_level=125.0,
-        noise_level=78.0,
-        absorption_db_per_km=0.5,
-        detection_threshold_db=15.0,
-    ),
-)
-
-_HOSTAGE_DAYS = 30.0
-_HOSTAGE_DT = 0.25
-_HOSTAGE_ONSET = 0.5
-# The ODE rate block, kindness schedule and initial state. These mirror
-# `experiment.hostage` in manuscript/config.yaml; the mirroring is asserted by
-# tests/test_mission.py::TestExecute::test_every_mirrored_constant_equals_its_config_key.
-_HOSTAGE_PARAMS = hostage_psychology.DynamicsParams(
-    fear_decay=0.12,
-    threat_sensitivity=0.30,
-    kindness_gain=0.65,
-    gratitude_decay=0.05,
-    ident_gain=0.50,
-    fear_suppress=0.15,
-    threat_initial=0.75,
-    threat_decay=0.18,
-    threat_floor=0.12,
-)
-_HOSTAGE_EVENTS = hostage_psychology.DEFAULT_KINDNESS_EVENTS
-_HOSTAGE_INITIAL = hostage_psychology.DEFAULT_INITIAL_STATE
-
 _GRID = power_grid.default_power_grid()
-_GRID_OUTAGE = "3->5"
-_GRID_OVERLOAD_FACTOR = 1.0
 
-_NEGOTIATION = negotiation_tactics.NegotiationParams(
-    deadline_days=10.0,
-    negotiator_discount=0.90,
-    concession_rate=0.08,
-    captor_discount_base=0.55,
-    captor_discount_gain=0.45,
-    initial_demand=0.95,
-    initial_offer=0.05,
-)
 
-_FUSION = sensor_fusion.TrackConfig(
-    dt=1.0,
-    steps=20,
-    process_noise=0.1,
-    measurement_noise=2.0,
-    seed=SEED,
-)
+@functools.lru_cache(maxsize=1)
+def _scenario() -> manuscript_variables.MissionScenario:
+    """Resolve the tunable mission inputs from config, once, deterministically."""
+    return manuscript_variables.build_mission_scenario()
 
 
 def _summary_assets() -> tuple[Asset, ...]:
@@ -157,28 +93,28 @@ def _summary_assets() -> tuple[Asset, ...]:
             payload={
                 "nodes": _PIPELINE.node_count(),
                 "edges": _PIPELINE.edge_count,
-                "tamper_events": _TAMPER_EVENTS,
-                "detection_probability": _DETECT_PROB,
+                "tamper_events": _scenario().tamper_events,
+                "detection_probability": _scenario().detection_probability,
             },
         ),
         Asset(
             kind="submarine",
             name="sonar-scenario",
             payload={
-                "grid": _SUB_GRID,
-                "step_m": _SUB_STEP_M,
-                "sensors": len(_SUB_SENSORS),
-                "start": list(_SUB_START),
-                "goal": list(_SUB_GOAL),
+                "grid": _scenario().submarine_grid,
+                "step_m": _scenario().submarine_step_m,
+                "sensors": len(_scenario().submarine_sensors),
+                "start": list(_scenario().submarine_start),
+                "goal": list(_scenario().submarine_goal),
             },
         ),
         Asset(
             kind="hostage",
             name="influence-model",
             payload={
-                "days": _HOSTAGE_DAYS,
-                "dt": _HOSTAGE_DT,
-                "onset_threshold": _HOSTAGE_ONSET,
+                "days": _scenario().hostage_days,
+                "dt": _scenario().hostage_dt,
+                "onset_threshold": _scenario().hostage_onset,
             },
         ),
         Asset(
@@ -187,24 +123,24 @@ def _summary_assets() -> tuple[Asset, ...]:
             payload={
                 "buses": _GRID.n_buses,
                 "lines": len(_GRID.lines),
-                "initial_outage": _GRID_OUTAGE,
+                "initial_outage": _scenario().grid_outage,
             },
         ),
         Asset(
             kind="negotiation",
             name="bargaining-stake",
             payload={
-                "deadline_days": _NEGOTIATION.deadline_days,
-                "negotiator_discount": _NEGOTIATION.negotiator_discount,
+                "deadline_days": _scenario().negotiation_params.deadline_days,
+                "negotiator_discount": _scenario().negotiation_params.negotiator_discount,
             },
         ),
         Asset(
             kind="fusion",
             name="tracking-scenario",
             payload={
-                "steps": _FUSION.steps,
-                "measurement_noise": _FUSION.measurement_noise,
-                "seed": _FUSION.seed,
+                "steps": _scenario().fusion_config.steps,
+                "measurement_noise": _scenario().fusion_config.measurement_noise,
+                "seed": _scenario().fusion_config.seed,
             },
         ),
     )
@@ -213,20 +149,20 @@ def _summary_assets() -> tuple[Asset, ...]:
 def _plan_params() -> dict[str, Any]:
     """The deterministic parameter map the plan steps execute against."""
     return {
-        "tamper_events": _TAMPER_EVENTS,
-        "detection_probability": _DETECT_PROB,
-        "grid_size": _SUB_GRID,
-        "step_m": _SUB_STEP_M,
-        "start": list(_SUB_START),
-        "goal": list(_SUB_GOAL),
-        "hostage_days": _HOSTAGE_DAYS,
-        "hostage_dt": _HOSTAGE_DT,
-        "hostage_onset": _HOSTAGE_ONSET,
-        "power_outage": _GRID_OUTAGE,
-        "power_overload_factor": _GRID_OVERLOAD_FACTOR,
-        "neg_deadline_days": _NEGOTIATION.deadline_days,
-        "fusion_steps": _FUSION.steps,
-        "fusion_measurement_noise": _FUSION.measurement_noise,
+        "tamper_events": _scenario().tamper_events,
+        "detection_probability": _scenario().detection_probability,
+        "grid_size": _scenario().submarine_grid,
+        "step_m": _scenario().submarine_step_m,
+        "start": list(_scenario().submarine_start),
+        "goal": list(_scenario().submarine_goal),
+        "hostage_days": _scenario().hostage_days,
+        "hostage_dt": _scenario().hostage_dt,
+        "hostage_onset": _scenario().hostage_onset,
+        "power_outage": _scenario().grid_outage,
+        "power_overload_factor": _scenario().grid_overload_factor,
+        "neg_deadline_days": _scenario().negotiation_params.deadline_days,
+        "fusion_steps": _scenario().fusion_config.steps,
+        "fusion_measurement_noise": _scenario().fusion_config.measurement_noise,
     }
 
 
@@ -258,40 +194,49 @@ def _run_steps() -> dict[str, Any]:
     tamper = cast(
         "dict[str, Any]",
         pipeline_security.simulate_tamper(
-            _PIPELINE, _TAMPER_EVENTS, SEED, _DETECT_PROB
+            _PIPELINE,
+            _scenario().tamper_events,
+            SEED,
+            _scenario().detection_probability,
         ),
     )
     # 3. passive-sonar risk field
-    risk = sub_defense.build_risk_map(_SUB_GRID, _SUB_SENSORS, _SUB_STEP_M)
+    risk = sub_defense.build_risk_map(
+        _scenario().submarine_grid,
+        _scenario().submarine_sensors,
+        _scenario().submarine_step_m,
+    )
     # 4. evasion routing (naive vs. least-risk)
     evasion = cast(
         "dict[str, Any]",
-        sub_defense.evasion_analysis(risk, start=_SUB_START, goal=_SUB_GOAL),
+        sub_defense.evasion_analysis(
+            risk, start=_scenario().submarine_start, goal=_scenario().submarine_goal
+        ),
     )
     # 5. hostage dynamics
     dynamics = hostage_psychology.integrate_dynamics(
-        days=_HOSTAGE_DAYS,
-        dt=_HOSTAGE_DT,
-        onset_threshold=_HOSTAGE_ONSET,
-        params=_HOSTAGE_PARAMS,
-        events=_HOSTAGE_EVENTS,
-        initial_state=_HOSTAGE_INITIAL,
+        days=_scenario().hostage_days,
+        dt=_scenario().hostage_dt,
+        onset_threshold=_scenario().hostage_onset,
+        params=_scenario().hostage_params,
+        events=_scenario().hostage_events,
+        initial_state=_scenario().hostage_initial,
     )
     # 6. power-grid cascading blackout
     blackout = power_grid.cascade_failure(
         _GRID,
-        _GRID_OUTAGE,
-        overload_factor=_GRID_OVERLOAD_FACTOR,
+        _scenario().grid_outage,
+        overload_factor=_scenario().grid_overload_factor,
     )
     # 7. hostage negotiation (syndrome drives the captor's patience)
     settlement = cast(
         "dict[str, Any]",
         negotiation_tactics.settlement_analysis(
-            _NEGOTIATION, syndrome=float(dynamics.final_syndrome)
+            _scenario().negotiation_params, syndrome=float(dynamics.final_syndrome)
         ),
     )
     # 8. sensor fusion (Kalman track of the hijacked submarine)
-    fusion = sensor_fusion.run_tracking(_FUSION)
+    fusion = sensor_fusion.run_tracking(_scenario().fusion_config)
 
     choke_points = cast("tuple[str, ...]", analysis["choke_points"])
     return {
@@ -386,41 +331,41 @@ class MissionProvider:
                     label="pipeline",
                     detail=(
                         f"{_PIPELINE.node_count()} nodes, {_PIPELINE.edge_count} segments, "
-                        f"{_TAMPER_EVENTS} tamper scenarios"
+                        f"{_scenario().tamper_events} tamper scenarios"
                     ),
                 ),
                 Finding(
                     label="submarine",
                     detail=(
-                        f"{_SUB_GRID}x{_SUB_GRID} sonar grid, {len(_SUB_SENSORS)} listening sensors"
+                        f"{_scenario().submarine_grid}x{_scenario().submarine_grid} sonar grid, {len(_scenario().submarine_sensors)} listening sensors"
                     ),
                 ),
                 Finding(
                     label="hostage",
                     detail=(
-                        f"{_HOSTAGE_DAYS:g}-day ODE integration (dt={_HOSTAGE_DT:g}), "
-                        f"onset threshold {_HOSTAGE_ONSET:g}"
+                        f"{_scenario().hostage_days:g}-day ODE integration (dt={_scenario().hostage_dt:g}), "
+                        f"onset threshold {_scenario().hostage_onset:g}"
                     ),
                 ),
                 Finding(
                     label="power",
                     detail=(
                         f"{_GRID.n_buses} buses, {len(_GRID.lines)} lines, "
-                        f"targeted interconnector {_GRID_OUTAGE}"
+                        f"targeted interconnector {_scenario().grid_outage}"
                     ),
                 ),
                 Finding(
                     label="negotiation",
                     detail=(
-                        f"{_NEGOTIATION.deadline_days:g}-day deadline, "
-                        f"negotiator discount {_NEGOTIATION.negotiator_discount:g}"
+                        f"{_scenario().negotiation_params.deadline_days:g}-day deadline, "
+                        f"negotiator discount {_scenario().negotiation_params.negotiator_discount:g}"
                     ),
                 ),
                 Finding(
                     label="fusion",
                     detail=(
-                        f"{_FUSION.steps} fixes, measurement std "
-                        f"{_FUSION.measurement_noise:g} (seed {_FUSION.seed})"
+                        f"{_scenario().fusion_config.steps} fixes, measurement std "
+                        f"{_scenario().fusion_config.measurement_noise:g} (seed {_scenario().fusion_config.seed})"
                     ),
                 ),
             )
@@ -502,7 +447,7 @@ class MissionProvider:
                 f"{r['exposure_reduction'] * 100.0:.1f}% over line-of-sight"
             ),
             (
-                f"taking the {_GRID_OUTAGE} interconnector blacked "
+                f"taking the {_scenario().grid_outage} interconnector blacked "
                 f"{r['blackout_lost_load_mw']:.0f} MW "
                 f"({r['blackout_fraction'] * 100.0:.1f}% of load) via a "
                 f"{r['blackout_lines_tripped']}-line cascade"
