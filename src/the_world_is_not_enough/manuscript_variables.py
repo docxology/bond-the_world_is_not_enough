@@ -450,7 +450,7 @@ def build_mission_scenario(
 
 
 def _run_domain_tokens(config: dict[str, Any]) -> dict[str, str]:
-    """Measure the three pillar models and format their result tokens."""
+    """Measure the six pillar models and format their result tokens."""
     experiment = config.get("experiment", {}) or {}
     if not isinstance(experiment, dict):
         raise TypeError("manuscript config 'experiment' section must be a mapping")

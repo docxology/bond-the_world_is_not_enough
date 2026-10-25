@@ -20,7 +20,7 @@ and do not let prose elsewhere in the package restate one.
 | Manuscript tokens generated | 76 (39 `CONFIG_*` — 30 declared in `config.yaml`, 9 derived from module datasets — plus 30 `RESULT_*` and 7 identity/environment) |
 | Manuscript sections | 9 (`00`–`07` plus `99_references`) |
 | Concept figures | 4 |
-| ruff / mypy | clean on `src/`, `scripts/`, `tests/` |
+| ruff / mypy | ruff clean on `src/`, `scripts/`, `tests/`; mypy clean on `src/`, `scripts/` |
 
 ## Regenerate
 

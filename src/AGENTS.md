@@ -3,8 +3,9 @@
 Repository-wide agent rules live in [`../docs/agent_instructions.md`](../docs/agent_instructions.md)
 and the root [`../AGENTS.md`](../AGENTS.md). Directory-specific guidance:
 
-- **`pipeline_security.py`, `sub_defense.py`, `hostage_psychology.py`** are the
-  pure domain core: deterministic, infrastructure-free, importable without
+- **`pipeline_security.py`, `sub_defense.py`, `hostage_psychology.py`,
+  `power_grid.py`, `negotiation_tactics.py`, `sensor_fusion.py`** are the pure
+  domain core: deterministic, infrastructure-free, importable without
   `bond_api`. Do not add protocol or suite imports here.
 - **`mission.py`** is the only module that imports `bond_api`; it implements
   the frozen `MissionProvider` and registers gadgets. Keep it thin — dispatch

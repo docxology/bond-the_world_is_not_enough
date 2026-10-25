@@ -48,8 +48,9 @@ metadata:
     codename: "ELEKTRA"
 
 # Deterministic experiment block — the single source of mission parameters.
-# The values mirror the mission adapter constants (src/.../mission.py) so the
-# manuscript, the figures, and the MissionProvider all measure the same run.
+# mission.py reads these through
+# manuscript_variables.build_mission_scenario(), so the manuscript, the
+# figures, and the MissionProvider all measure the same run.
 experiment:
   seed: 1999
   pipeline:

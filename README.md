@@ -64,12 +64,16 @@ seed (`1999`); no metric in the manuscript is hand-authored.
 ## Setup
 
 ```bash
-cd /Users/4d/Documents/GitHub/template/projects/working/bond/the_world_is_not_enough
+# from this package directory
 uv sync --extra dev
 ```
 
 `bond-api` (Layer 1, frozen protocol) and `bond-utilities` (Layer 0) are
-installed as local path dependencies from the same local-only suite tree.
+installed as local path dependencies from the same local-only suite tree, so
+`uv sync` needs that tree present: `[tool.uv.sources]` pins both to the
+absolute monorepo paths, and neither package is on PyPI. In a clone without
+that tree, install the two packages into the environment yourself and run the
+gates with `src` on `PYTHONPATH`.
 
 ## Usage
 
@@ -143,7 +147,7 @@ gadgets — never as a protocol change.
 
 ```bash
 uv run pytest tests/ --cov=src --cov-fail-under=90
-uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/
+uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
 uv run mypy src/ scripts/
 ```
 
@@ -156,6 +160,7 @@ stale.
 ## The BOND suite
 
 This is a film package in the local-only PROJECT BOND suite
-(`projects/working/bond/`, 27 film packages + infrastructure). Scope is exactly
-this package directory; there is no remote and nothing is pushed. See
+(`projects/working/bond/`, 27 film packages + infrastructure). The suite tree
+stays local; this package's only remote is its GitHub publish mirror
+(`origin`). Scope is exactly this package directory. See
 `TODO.md` for the open work, the accepted limitations, and the gates.

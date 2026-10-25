@@ -1,6 +1,6 @@
 {
   "title": "The World Is Not Enough: ELEKTRA — Special-Agent Mission Software",
-  "description": "Deterministic BOND suite mission software modeling oil-pipeline choke-point security, nuclear-submarine defense, and hostage-psychology influence dynamics.",
+  "description": "Deterministic BOND suite mission software modeling oil-pipeline choke-point security, submarine evasion and detection, Stockholm-syndrome influence dynamics, DC power-flow cascading blackout, hostage negotiation, and sensor fusion.",
   "creators": [
     {
       "name": "Friedman, Daniel Ari",
@@ -18,6 +18,9 @@
     "passive sonar equation",
     "evasion routing",
     "hostage psychology",
-    "Stockholm syndrome"
+    "Stockholm syndrome",
+    "DC power flow",
+    "Rubinstein bargaining",
+    "Kalman filter"
   ]
 }

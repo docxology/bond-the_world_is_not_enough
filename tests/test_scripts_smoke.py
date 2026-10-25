@@ -59,7 +59,7 @@ class TestPhaseScripts:
 
 
 class TestFigureScript:
-    def test_generates_three_pngs(self, tmp_path: Path) -> None:
+    def test_generates_all_figure_pngs(self, tmp_path: Path) -> None:
         proc = subprocess.run(
             [
                 sys.executable,
@@ -77,6 +77,7 @@ class TestFigureScript:
             "pipeline_network.png",
             "submarine_detection.png",
             "hostage_dynamics.png",
+            "sensor_fusion_track.png",
         ):
             assert (tmp_path / name).is_file(), f"missing {name}: {proc.stdout}"
 

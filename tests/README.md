@@ -15,6 +15,8 @@ Zero-mock test suite.
 | `test_manuscript_variables.py` | token hydration + live manuscript cross-reference |
 | `test_claim_ledger.py` | binds `data/claim_ledger.yaml` entries to live token values |
 | `test_scripts_smoke.py` | real subprocess phase CLIs and artifact scripts |
+| `test_guardrails.py` | the zero-mock and no-lineage hard rules, walked over `src/`, `scripts/`, `tests/` with planted-string positive controls |
+| `test_counts_staleness.py` | re-derives every structural row of `docs/_generated/COUNTS.md` from live objects, plus a mutation control on the comparison itself |
 
 See `PATTERNS.md` for shared patterns and `../docs/testing_philosophy.md` for
 the philosophy and the coverage gate (`uv run pytest tests/ --cov=src --cov-fail-under=90`).

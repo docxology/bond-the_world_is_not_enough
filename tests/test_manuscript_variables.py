@@ -570,9 +570,7 @@ class TestHostageParametersAreReallyConfigured:
         config = MV.load_manuscript_config()
         del config["experiment"]["hostage"]["dynamics"][rate]
         with pytest.raises(KeyError, match=rate):
-            MV.generate_variables(
-                config_path=ROOT / "_staging_deleted_rate.yaml"
-            ) if False else MV.build_mission_scenario(config)
+            MV.build_mission_scenario(config)
 
     def test_malformed_blocks_are_refused(self) -> None:
         with pytest.raises(TypeError, match="dynamics"):
@@ -615,7 +613,7 @@ class TestSharedScenarioBuilder:
             (["experiment", "fusion"], "fusion"),
         ],
     )
-    def test_non_mapping_section_raises(self, tmp_path: Path, path, msg) -> None:
+    def test_non_mapping_section_raises(self, path, msg) -> None:
         config = MV.load_manuscript_config()
         self._with(config, path, "not-a-mapping")
         with pytest.raises(TypeError, match=msg):

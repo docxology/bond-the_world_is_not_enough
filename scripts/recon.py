@@ -20,7 +20,7 @@ from bond_api.protocol import ReconRequest
 from bond_api.serialization import to_json
 
 SLUG = "the_world_is_not_enough"
-GOAL = "prepare the ELEKTRA mission across all three pillars"
+GOAL = "prepare the ELEKTRA mission across all six pillars"
 
 
 def main() -> int:

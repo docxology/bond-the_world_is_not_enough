@@ -138,6 +138,8 @@ real run rather than quoting a percentage in prose here.
 | `test_manuscript_variables.py` | config loading and validation, token hydration, derived-dataset tokens, the measurability gate, the unit gate and rate ceilings, tamper-volume accounting, the leverage token's relative-vs-absolute reading, config-knob *consumption* for every hostage rate and bargaining knob, the §5 Source-column partition, example-config sync, the architecture-doc public-surface gate, strict/non-strict tree resolution, and the live cross-reference that every `{{TOKEN}}` in a numbered section is generated |
 | `test_claim_ledger.py` | binds every entry of `data/claim_ledger.yaml` to the live value of the token it cites, plus a non-empty check and a per-claim mutation control on the comparison function itself |
 | `test_scripts_smoke.py` | the phase CLIs and artifact scripts as real subprocesses |
+| `test_guardrails.py` | the zero-mock and no-lineage rules as gates: walks `src/`, `scripts/` and `tests/` for mock-framework patterns and the bracket-split lineage string, each with a positive control proving the matcher fires |
+| `test_counts_staleness.py` | re-derives every structural row of `docs/_generated/COUNTS.md` (plan steps, result keys, gadgets, tokens, sections, figures, stages, lessons) from live objects, with a mutation control on the comparison itself |
 
 ## Deterministic-input guidance
 

@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import heapq
 import math
-from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast
 
@@ -370,7 +369,3 @@ def scenario_fingerprint(
             *sensor_lines,
         ]
     )
-
-
-#: Type alias used by the mission adapter for gadget dispatch.
-ScenarioBuilder = Callable[..., dict[str, object]]

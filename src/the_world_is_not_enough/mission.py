@@ -13,8 +13,10 @@ module (per the discovery contract) whose ``MissionProvider`` class satisfies
 capabilities in a :class:`bond_api.registry.GadgetRegistry` at import time.
 
 The domain cores stay importable without ``bond_api``; this module is the only
-one that imports the protocol. All mission inputs are fixed module constants,
-and the outcome carries full provenance (package version, deterministic seed,
+one that imports the protocol. The datasets are fixed module constants; every
+tunable mission input is resolved from ``manuscript/config.yaml`` through
+``manuscript_variables.build_mission_scenario()``, and
+the outcome carries full provenance (package version, deterministic seed,
 an input hash over the executed plan) with ``wall_time_s = 0.0`` so the mission
 is byte-reproducible. The public protocol surface is stable: deeper pillars are
 added as extra plan steps, result keys, and gadgets, not as protocol changes.

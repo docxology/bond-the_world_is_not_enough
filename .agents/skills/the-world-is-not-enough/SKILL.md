@@ -8,25 +8,25 @@ tags: [bond, film, elektra, pipeline-security, submarine-defense, hostage-psycho
 # the-world-is-not-enough (ELEKTRA)
 
 BOND suite film package for *The World Is Not Enough* (1999), mission codename
-ELEKTRA. Models three deterministic pillars and adapts them to the frozen
+ELEKTRA. Models six deterministic pillars and adapts them to the frozen
 `bond_api` `MissionProvider` protocol.
 
 ## When to use
 
 - Building or maintaining `projects/working/bond/the_world_is_not_enough/`.
-- Extending the three pillar models or the mission adapter.
+- Extending the six pillar models or the mission adapter.
 
 ## Quick reference
 
 ```bash
 # Gates
 uv run pytest tests/ --cov=src --cov-fail-under=90
-uv run ruff check src/ scripts/ tests/ && uv run ruff format src/ scripts/ tests/
+uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
 uv run mypy src/ scripts/
 
 # Mission + artifacts
 uv run python scripts/execute.py                       # outcome + provenance record
-uv run python scripts/generate_figures.py              # 3 concept figures
+uv run python scripts/generate_figures.py              # 4 concept figures
 uv run python scripts/z_generate_manuscript_variables.py   # token hydration
 ```
 

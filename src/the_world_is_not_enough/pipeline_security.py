@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import random
 from collections import deque
-from collections.abc import Callable
 from dataclasses import dataclass, field
 
 #: A load-bearing segment counts as a *choke point* once its utilization
@@ -534,7 +533,3 @@ def normalize_risk_profile(network: PipelineNetwork) -> dict[str, float]:
     if total <= 0:
         return {e.id: 0.0 for e in network.edges}
     return {e.id: e.tamper_risk / total for e in network.edges}
-
-
-#: Type alias used by the mission adapter for gadget dispatch.
-PipelineAnalyzer = Callable[[PipelineNetwork], dict[str, object]]

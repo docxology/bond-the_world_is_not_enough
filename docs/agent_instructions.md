@@ -6,7 +6,9 @@ Operational constraints for AI agents and maintainers working in this package.
 
 - This package is a PROJECT BOND film package. Scope is **exactly** this
   directory; do not modify siblings, bond root files, or the template repo.
-- This tree is local-only and has **no git remote**. Commit here; never push.
+- The suite tree is local-only: this package's only remote is its GitHub
+  publish mirror (`origin`). Commit here; never push into a sibling package
+  or the suite root.
 - `../AGENTS.md` (root) carries the hard rules. `testing_philosophy.md`
   governs how tests are written. `architecture.md` describes every module.
 
@@ -91,7 +93,7 @@ belongs in a module.
 
 ```bash
 uv run pytest tests/ --cov=src --cov-fail-under=90
-uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/
+uv run ruff check src/ scripts/ tests/ && uv run ruff format --check src/ scripts/ tests/
 uv run mypy src/ scripts/
 uv run python scripts/z_generate_manuscript_variables.py   # strict token gate
 rg -n "template[_]code_project" . --glob '!uv.lock' --glob '!.git/**' || echo clean

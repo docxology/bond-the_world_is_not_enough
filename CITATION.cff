@@ -2,11 +2,13 @@ cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: "The World Is Not Enough: ELEKTRA — Special-Agent Mission Software"
 abstract: >-
-  Deterministic BOND suite mission software modeling oil-pipeline
-  choke-point security (max-flow/min-cut, betweenness, tamper simulation),
-  nuclear-submarine defense (passive-sonar detection and least-risk evasion
-  routing), and hostage-psychology influence dynamics (Stockholm-syndrome ODE
-  model). All results are reproducible under a fixed seed.
+  Deterministic BOND suite mission software modeling six operational pillars:
+  oil-pipeline choke-point security (max-flow/min-cut, betweenness, tamper
+  simulation), submarine evasion and detection (passive-sonar detection and
+  least-risk routing), Stockholm-syndrome influence dynamics (hostage ODE
+  model), DC power-flow load solve with cascading blackout, hostage negotiation
+  under syndrome-driven patience (Rubinstein bargaining), and Kalman-filter
+  sensor fusion. All results are reproducible under a fixed seed.
 authors:
   - family-names: Friedman
     given-names: Daniel Ari
@@ -22,3 +24,6 @@ keywords:
   - "evasion routing"
   - "hostage psychology"
   - "Stockholm syndrome"
+  - "DC power flow"
+  - "Rubinstein bargaining"
+  - "Kalman filter"

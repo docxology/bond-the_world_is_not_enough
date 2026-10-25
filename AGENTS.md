@@ -25,7 +25,8 @@ bond root files, or the template repo.
 
 ## Hard rules
 
-- **Local-only.** No remote, never push. Commits are path-scoped inside this
+- **Local-only suite.** The suite tree is local-only; this repo's only remote
+  is its GitHub publish mirror (`origin`). Commits are path-scoped inside this
   repo only.
 - **No mocks.** Real data + computation only; deterministic fakes implementing
   the real protocol.

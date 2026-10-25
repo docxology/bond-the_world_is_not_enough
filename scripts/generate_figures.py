@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""ELEKTRA — render the three concept figures.
+"""ELEKTRA — render the four concept figures.
 
 Thin orchestrator: bootstraps ``src/`` and calls
-``the_world_is_not_enough.figures.generate_all_figures``, writing the three
+``the_world_is_not_enough.figures.generate_all_figures``, writing the four
 PNGs under ``output/figures/`` by default (git-ignored, regenerable). Exits 0
-iff all three figures are produced.
+iff all four figures are produced.
 """
 
 from __future__ import annotations
