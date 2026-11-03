@@ -35,8 +35,8 @@ dev = [
 # the Layer 0 foundation. Both live in the same local-only suite tree; there
 # is no remote for any of them.
 [tool.uv.sources]
-bond-api = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-api" }
-bond-utilities = { path = "/Users/4d/Documents/GitHub/template/projects/working/bond/bond-utilities" }
+bond-api = { path = "../bond-api" }
+bond-utilities = { path = "../bond-utilities" }
 
 [tool.pytest.ini_options]
 # RASP Strict Assertion: Tests must be clearly separated and structurally identifiable
