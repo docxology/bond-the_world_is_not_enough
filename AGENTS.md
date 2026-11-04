@@ -40,13 +40,14 @@ bond root files, or the template repo.
   any persisted artifact (`wall_time_s = 0.0`; fixed mission epoch for
   persisted records; `MANUSCRIPT_EDITION_STAMP` derived from the committed
   `paper.date`, never `datetime.now()`). Regenerating `output/` twice must be
-  byte-identical — **with one measured exception, 2026-11-04**: under the
-  default interpreter `output/figures/pipeline_network.png` differs on every
-  run, because `figures.py` places intermediate nodes with `hash(node)`, which
-  is randomized per process; with `PYTHONHASHSEED=0` two runs are
-  byte-identical (whole-`output/` digest `c4289cc298030a74`, reproduced three
-  times). The other three figures are byte-stable either way. That is a defect
-  with its own change (TODO row W5), not a property to rely on.
+  byte-identical, and that is now **checked rather than asserted**:
+  `tests/test_figures.py::TestProcessIndependentLayout::test_figures_are_identical_under_two_hash_seeds`
+  renders every figure in two subprocesses started with different
+  `PYTHONHASHSEED` values and compares the bytes. Before 2026-11-04 the rule
+  was false — `figures.py` placed intermediate nodes with `hash(node)`, which
+  is salted per process, so `pipeline_network.png` changed on every run while
+  the suite stayed green; the fix uses a CRC of the node name and the test
+  fails on the old code (TODO row W5).
 - **Lint + types.** `uv run ruff check src/ scripts/ tests/`,
   `uv run ruff format --check src/ scripts/ tests/`, `uv run mypy src/ scripts/`.
 - **Metrics are tokens.** Never hand-author numbers in prose; they flow through

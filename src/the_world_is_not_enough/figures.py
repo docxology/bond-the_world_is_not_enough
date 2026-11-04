@@ -20,6 +20,7 @@ Figures:
 from __future__ import annotations
 
 import os
+import zlib
 from pathlib import Path
 from typing import cast
 
@@ -56,6 +57,15 @@ def _style() -> None:
     )
 
 
+def _stable_fraction(name: str, buckets: int = 100) -> float:
+    """A process-independent fraction in ``[0, 1)`` derived from ``name``.
+
+    ``hash(name)`` would be salted per process, so it cannot place a figure
+    reproducibly; a CRC of the bytes can, and it scatters the same way.
+    """
+    return zlib.crc32(name.encode("utf-8")) % buckets / buckets
+
+
 def figure_pipeline_network(
     network: pipeline_security.PipelineNetwork,
     analysis: dict[str, object],
@@ -80,9 +90,13 @@ def figure_pipeline_network(
                 queue.append(nxt)
     max_depth = max(depth.values())
     x = {node: depth[node] / max(1, max_depth) for node in network.nodes}
+    # ``hash()`` on a str is salted per process (PYTHONHASHSEED), so laying the
+    # nodes out with it made this figure differ on every run. The digest below is
+    # the same scattered placement, reproducible across processes and machines;
+    # tests/test_figures.py::TestProcessIndependentLayout pins that.
     y = {
         node: (
-            0.5 if node in (network.source, network.sink) else hash(node) % 100 / 100.0
+            0.5 if node in (network.source, network.sink) else _stable_fraction(node)
         )
         for node in network.nodes
     }

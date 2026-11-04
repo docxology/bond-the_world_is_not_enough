@@ -97,6 +97,17 @@ Two runs with the same seed must produce identical outputs.
 test. Provenance carries `wall_time_s = 0.0`, so no test ever asserts on a
 clock.
 
+**In-process determinism is not enough.** `PYTHONHASHSEED` salts `hash()` on
+strings once per process, so a layout built from it is stable inside one
+interpreter and different in the next — which is exactly how
+`pipeline_network.png` changed on every run while every in-process assertion
+stayed green (TODO row W5, closed 2026-11-04). The figure suite therefore
+crosses that boundary on purpose:
+`test_figures.py::TestProcessIndependentLayout` renders every figure in two
+subprocesses started with different `PYTHONHASHSEED` values and compares the
+bytes. Run it against the pre-fix code and it fails; run the old suite against
+the same code and it passes at 7 passed.
+
 ### Error branches are covered
 
 Dataclass validation and input bounds (`ValueError` / `TypeError`) are
@@ -135,7 +146,7 @@ real run rather than quoting a percentage in prose here.
 | `test_negotiation_tactics.py` | parameter validation, Rubinstein equilibrium, syndrome→patience mapping, all three settlement outcomes (stalemate, deadline, settled) and both floor-binding branches |
 | `test_sensor_fusion.py` | track generation determinism, Kalman predict/update, RMSE and gain against the raw-measurement baseline, convergence |
 | `test_mission.py` | protocol conformance, all five stages, eight plan steps, provenance and `input_hash` determinism, gadget registration, discovery, serialization |
-| `test_figures.py` | deterministic generation of all four figures (headless `Agg`) |
+| `test_figures.py` | deterministic generation of all four figures (headless `Agg`), plus a two-subprocess `PYTHONHASHSEED` comparison of the PNG bytes |
 | `test_manuscript_variables.py` | config loading and validation, token hydration, derived-dataset tokens, the measurability gate, the unit gate and rate ceilings, tamper-volume accounting, the leverage token's relative-vs-absolute reading, config-knob *consumption* for every hostage rate and bargaining knob, the §5 Source-column partition, example-config sync, the architecture-doc public-surface gate, strict/non-strict tree resolution, and the live cross-reference that every `{{TOKEN}}` in a numbered section is generated |
 | `test_claim_ledger.py` | binds every entry of `data/claim_ledger.yaml` to the live value of the token it cites, plus a non-empty check and a per-claim mutation control on the comparison function itself |
 | `test_scripts_smoke.py` | the phase CLIs and artifact scripts as real subprocesses |

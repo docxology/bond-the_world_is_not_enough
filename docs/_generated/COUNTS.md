@@ -6,11 +6,18 @@ and do not let prose elsewhere in the package restate one.
 
 Measured 2026-11-04 on Python 3.15.1 with the locked tools (ruff 0.16.1,
 mypy 2.3.0), after `bond-api` and `bond-utilities` moved to the recorded copies
-under `vendor/`.
+under `vendor/` and after the figure layout stopped depending on `hash()`
+(TODO row W5).
+
+The regeneration digest is byte-identical across separate processes under the
+default interpreter (`cc845bd4e5d34e10`, two consecutive runs):
+`tests/test_figures.py::TestProcessIndependentLayout` now pins that by
+comparing bytes from two subprocesses with different `PYTHONHASHSEED` values.
+Before 2026-11-04 it was false — one figure changed on every run.
 
 | Metric | Value |
 | --- | --- |
-| Test count (pytest, 0 failed / 0 skipped) | 406 |
+| Test count (pytest, 0 failed / 0 skipped) | 407 |
 | Line + branch coverage on `src/` | 100.00% (gate: ≥90%) |
 | Coverage gate | `uv run pytest tests/ --cov=src --cov-fail-under=90` |
 | Mocks | 0 (no `unittest.mock` / `MagicMock` / `mocker.patch` / `monkeypatch`) |
@@ -30,10 +37,6 @@ under `vendor/`.
 
 Two measurement caveats, both recorded in TODO's wave section:
 
-* The regeneration digest is byte-identical only with `PYTHONHASHSEED=0`. Under
-  the default interpreter `output/figures/pipeline_network.png` differs on
-  every run, because `figures.py` places intermediate nodes with `hash(node)`.
-  That is row W5's defect, with its own change.
 * A whole-tree `mypy .` run reports **31 errors in 5 files** (34 checked) at
   both the pre-change and post-change heads — outside the documented gate,
   which is `mypy src/ scripts/`.
@@ -51,7 +54,7 @@ uv run pytest tests/ --cov=src --cov-fail-under=90 -q | tail -3
 # token counts (writes output/data/manuscript_variables.json)
 uv run python scripts/z_generate_manuscript_variables.py
 
-# figures (see the determinism caveat above)
+# figures (byte-identical across processes; pinned by tests/test_figures.py)
 uv run python scripts/generate_figures.py
 
 # structural counts: plan steps, result keys, gadgets

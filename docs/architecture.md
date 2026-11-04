@@ -298,9 +298,11 @@ additionally persists a provenance record through
 `RESULT_*` values → `manuscript_variables.py` → `{{TOKEN}}`s →
 `output/manuscript/*.md` + `output/data/manuscript_variables.json`. Figures
 derive from the same models. `output/` is git-ignored, so a full regeneration
-leaves the tree clean — which is a git-hygiene fact, not a byte-identity proof
-(measured 2026-11-04: one figure's bytes vary between runs; see `AGENTS.md`
-and TODO row W5).
+leaves the tree clean — a git-hygiene fact on its own, and since 2026-11-04 a
+byte-identity one too: `tests/test_figures.py::TestProcessIndependentLayout`
+renders every figure under two `PYTHONHASHSEED` values and compares the bytes,
+which is what closes TODO row W5 (the layout used `hash()`, salted per
+process).
 
 ## External dependencies
 
