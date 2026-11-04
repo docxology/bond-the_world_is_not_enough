@@ -50,7 +50,7 @@ wheels = [
 [[package]]
 name = "bond-api"
 version = "0.1.0"
-source = { directory = "../bond-api" }
+source = { directory = "vendor/bond-api" }
 dependencies = [
     { name = "pyyaml" },
 ]
@@ -69,7 +69,7 @@ provides-extras = ["dev"]
 [[package]]
 name = "bond-utilities"
 version = "0.3.0"
-source = { directory = "../bond-utilities" }
+source = { directory = "vendor/bond-utilities" }
 dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
@@ -1006,8 +1006,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "bond-api", directory = "../bond-api" },
-    { name = "bond-utilities", directory = "../bond-utilities" },
+    { name = "bond-api", directory = "vendor/bond-api" },
+    { name = "bond-utilities", directory = "vendor/bond-utilities" },
     { name = "matplotlib", specifier = ">=3.7.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
     { name = "numpy", specifier = ">=1.24.0" },
