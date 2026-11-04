@@ -2,10 +2,16 @@
 
 Matplotlib is forced headless (Agg) in conftest; every figure is rendered to a
 tmp directory and its PNG existence + non-empty size asserted. No mocks.
+
+The last test crosses a process boundary on purpose: determinism that survives
+only within one interpreter is what ``hash()`` on a string looked like.
 """
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 from the_world_is_not_enough import figures as F
@@ -15,6 +21,8 @@ from the_world_is_not_enough import (
     sensor_fusion,
     sub_defense,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 class TestIndividualFigures:
@@ -96,3 +104,35 @@ class TestGenerateAllFigures:
         )
         assert path.is_file()
         assert path.stat().st_size > 0
+
+
+class TestProcessIndependentLayout:
+    """The figure bytes must not depend on the interpreter's string-hash salt.
+
+    ``PYTHONHASHSEED`` randomizes ``hash()`` on strings once per process, so a
+    layout built from ``hash(node)`` produced different PNGs on every run while
+    every in-process assertion stayed green. Two subprocesses started with
+    different seeds must write byte-identical figures.
+    """
+
+    @staticmethod
+    def _render(out_dir: Path, hashseed: str) -> dict[str, bytes]:
+        env = dict(os.environ, PYTHONHASHSEED=hashseed)
+        subprocess.run(
+            [
+                sys.executable,
+                str(ROOT / "scripts" / "generate_figures.py"),
+                "--output-dir",
+                str(out_dir),
+            ],
+            check=True,
+            capture_output=True,
+            env=env,
+        )
+        return {p.name: p.read_bytes() for p in sorted(out_dir.glob("*.png"))}
+
+    def test_figures_are_identical_under_two_hash_seeds(self, tmp_path: Path) -> None:
+        first = self._render(tmp_path / "seed0", "0")
+        second = self._render(tmp_path / "seed12345", "12345")
+        assert set(first) == set(second)
+        assert first == second, "figure bytes moved with PYTHONHASHSEED"
