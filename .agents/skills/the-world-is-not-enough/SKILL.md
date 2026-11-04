@@ -13,7 +13,8 @@ ELEKTRA. Models six deterministic pillars and adapts them to the frozen
 
 ## When to use
 
-- Building or maintaining `projects/working/bond/the_world_is_not_enough/`.
+- Building or maintaining this film package (a sibling of the other `bond-*`
+  directories; the template-era `projects/working/bond/` path is gone).
 - Extending the six pillar models or the mission adapter.
 
 ## Quick reference

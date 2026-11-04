@@ -1,6 +1,8 @@
 # AGENTS.md — the_world_is_not_enough (ELEKTRA)
 
-This is an active BOND suite film package under `projects/working/bond/`.
+This is an active BOND suite film package; its sibling packages sit beside it
+(measured 2026-11-04: `../bond-*` matches 33 directories; the template-era
+`projects/working/bond/` path no longer exists on this machine).
 Scope is **exactly this package directory** — never touch sibling packages,
 bond root files, or the template repo.
 
@@ -38,9 +40,15 @@ bond root files, or the template repo.
   any persisted artifact (`wall_time_s = 0.0`; fixed mission epoch for
   persisted records; `MANUSCRIPT_EDITION_STAMP` derived from the committed
   `paper.date`, never `datetime.now()`). Regenerating `output/` twice must be
-  byte-identical.
+  byte-identical — **with one measured exception, 2026-11-04**: under the
+  default interpreter `output/figures/pipeline_network.png` differs on every
+  run, because `figures.py` places intermediate nodes with `hash(node)`, which
+  is randomized per process; with `PYTHONHASHSEED=0` two runs are
+  byte-identical (whole-`output/` digest `c4289cc298030a74`, reproduced three
+  times). The other three figures are byte-stable either way. That is a defect
+  with its own change (TODO row W5), not a property to rely on.
 - **Lint + types.** `uv run ruff check src/ scripts/ tests/`,
-  `uv run ruff format src/ scripts/ tests/`, `uv run mypy src/ scripts/`.
+  `uv run ruff format --check src/ scripts/ tests/`, `uv run mypy src/ scripts/`.
 - **Metrics are tokens.** Never hand-author numbers in prose; they flow through
   `src/the_world_is_not_enough/manuscript_variables.py` from
   `manuscript/config.yaml` plus measured model outputs.
@@ -52,7 +60,9 @@ bond root files, or the template repo.
 ## Protocol integration
 
 `bond-api` and `bond-utilities` are local path dependencies
-(`[tool.uv.sources]`) from the same suite tree. The domain core stays
+(`[tool.uv.sources]`) on the recorded copies at `vendor/bond-api` and
+`vendor/bond-utilities`, so a clone resolves with no suite tree present (see
+`VENDOR.md`). The domain core stays
 importable without `bond_api`; `mission.py` is the only module that imports it.
 Gadgets (`pipeline_analysis`, `tamper_simulation`, `evasion_analysis`,
 `hostage_dynamics`, `power_cascade`, `negotiation_settlement`,
@@ -62,7 +72,7 @@ module-level `GADGETS` registry for the orchestrator to discover.
 ## Build / test / verify
 
 Setup once (`bond-api` and `bond-utilities` resolve as local path
-dependencies from the same suite tree):
+dependencies on the recorded copies inside this repository):
 
 ```bash
 uv sync --extra dev

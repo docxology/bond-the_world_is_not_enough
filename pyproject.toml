@@ -1,5 +1,7 @@
 # ELEKTRA Configuration — The World Is Not Enough (1999), BOND suite film package
-# Inherits workspace settings from root pyproject.toml
+# Package-local configuration: nothing is inherited. The only other pyproject.toml
+# above this one (the vault manager's) declares no [tool.ruff]/[tool.mypy] settings
+# and is not a uv workspace root.
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -31,9 +33,9 @@ dev = [
     "types-PyYAML>=6.0",
 ]
 
-# Local path dependency on the FROZEN BOND-API protocol package (Layer 1) and
-# the Layer 0 foundation. Both live in the same local-only suite tree; there
-# is no remote for any of them.
+# Local path dependencies on the recorded copies of the FROZEN BOND-API protocol
+# package (Layer 1) and the Layer 0 foundation. Both ship inside this repository
+# under vendor/ and have no remote of their own.
 [tool.uv.sources]
 bond-api = { path = "vendor/bond-api" }
 bond-utilities = { path = "vendor/bond-utilities" }
@@ -71,17 +73,19 @@ exclude_lines = [
 ]
 
 [tool.ruff]
-# Line length mirrors the template default (88). The monorepo root config does
-# not reach four levels deep, so the package carries its own lint settings.
+# line-length 88 is the width this tree is written to (measured 2026-11-04: the
+# documented format gate is clean at 88, and 25 files would be reformatted at
+# 120) and ruff's own default; no ancestor pyproject.toml declares a width, so
+# this file carries it.
 # The vendored copies are byte-identical to upstream and must stay that way.
 extend-exclude = ["vendor"]
 line-length = 88
 target-version = "py310"
 
 [tool.mypy]
-# Project-local mypy settings (the monorepo root config has no mypy_path for
-# this package's src/ layout). Mirrors the root gates: strict-ish typing,
-# explicit package bases, ignore missing stubs.
+# Project-local mypy settings: no ancestor pyproject.toml declares any mypy
+# settings, so this package's src/ layout needs its own mypy_path. Mirrors the
+# root gates: strict-ish typing, explicit package bases, ignore missing stubs.
 # Vendored copies are a dependency; their bytes are bound by scripts/vendor.py.
 exclude = ["(^|/)vendor/"]
 python_version = "3.12"
@@ -97,4 +101,6 @@ warn_unused_ignores = true
 ignore_missing_imports = true
 
 [tool.uv]
-# Inherits workspace settings from root pyproject.toml
+# No ancestor [tool.uv] applies: uv merges no parent settings outside a workspace,
+# and the only other pyproject.toml above this one is not a workspace root
+# (measured: it declares `package = false` and no [tool.uv.workspace]).

@@ -298,11 +298,15 @@ additionally persists a provenance record through
 `RESULT_*` values → `manuscript_variables.py` → `{{TOKEN}}`s →
 `output/manuscript/*.md` + `output/data/manuscript_variables.json`. Figures
 derive from the same models. `output/` is git-ignored, so a full regeneration
-leaves the tree clean — itself a determinism proof.
+leaves the tree clean — which is a git-hygiene fact, not a byte-identity proof
+(measured 2026-11-04: one figure's bytes vary between runs; see `AGENTS.md`
+and TODO row W5).
 
 ## External dependencies
 
-- `bond-api` (frozen protocol, Layer 1) — local path dependency.
-- `bond-utilities` (Layer 0, provenance persistence) — local path dependency.
+- `bond-api` (frozen protocol, Layer 1) — recorded copy at `vendor/bond-api`.
+- `bond-utilities` (Layer 0, provenance persistence) — recorded copy at
+  `vendor/bond-utilities`.
 
-Both resolve from the same local-only suite tree via `[tool.uv.sources]`.
+Both resolve from inside this repository via `[tool.uv.sources]`; no suite tree
+is needed to sync or run the gates.

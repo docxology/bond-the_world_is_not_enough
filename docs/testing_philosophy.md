@@ -10,7 +10,8 @@ real deterministic inputs.
 No `MagicMock`, `mocker.patch`, `unittest.mock`, `create_autospec`, or
 `monkeypatch` on a dependency. There is nothing to fake: the six domain
 modules are pure functions over declared datasets, and `bond_api` /
-`bond_utilities` are real local path dependencies that install and run. HTTP,
+`bond_utilities` are real local path dependencies on the recorded copies under
+`vendor/` that install and run. HTTP,
 databases, and the network do not appear anywhere in this package, so the
 usual reasons to reach for a mock do not arise.
 

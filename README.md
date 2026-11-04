@@ -68,12 +68,15 @@ seed (`1999`); no metric in the manuscript is hand-authored.
 uv sync --extra dev
 ```
 
-`bond-api` (Layer 1, frozen protocol) and `bond-utilities` (Layer 0) are
-installed as local path dependencies from the same local-only suite tree, so
-`uv sync` needs that tree present: `[tool.uv.sources]` pins both to the
-absolute monorepo paths, and neither package is on PyPI. In a clone without
-that tree, install the two packages into the environment yourself and run the
-gates with `src` on `PYTHONPATH`.
+`bond-api` (Layer 1, frozen protocol) and `bond-utilities` (Layer 0) ship
+inside this repository as recorded copies under `vendor/`, and `uv sync`
+installs both from there: neither package is on PyPI, and no suite tree needs
+to be present. `PROVENANCE.json` records the upstream commit and byte digests
+of each copy; `uv run python scripts/vendor.py --check` re-verifies them
+offline. Until 2026-11-04 `[tool.uv.sources]` pointed at sibling checkouts
+(`../bond-api`, `../bond-utilities` — relative paths, not the absolute ones an
+earlier revision of this paragraph claimed), which made a sibling-free clone
+unsyncable.
 
 ## Usage
 
@@ -159,8 +162,8 @@ stale.
 
 ## The BOND suite
 
-This is a film package in the local-only PROJECT BOND suite
-(`projects/working/bond/`, 27 film packages + infrastructure). The suite tree
+This is a film package in the local-only PROJECT BOND suite; the other film
+packages sit beside this directory (`../bond-*`). The suite tree
 stays local; this package's only remote is its GitHub publish mirror
 (`origin`). Scope is exactly this package directory. See
 `TODO.md` for the open work, the accepted limitations, and the gates.
