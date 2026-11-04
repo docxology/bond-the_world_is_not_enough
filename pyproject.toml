@@ -35,8 +35,8 @@ dev = [
 # the Layer 0 foundation. Both live in the same local-only suite tree; there
 # is no remote for any of them.
 [tool.uv.sources]
-bond-api = { path = "../bond-api" }
-bond-utilities = { path = "../bond-utilities" }
+bond-api = { path = "vendor/bond-api" }
+bond-utilities = { path = "vendor/bond-utilities" }
 
 [tool.pytest.ini_options]
 # RASP Strict Assertion: Tests must be clearly separated and structurally identifiable
@@ -73,6 +73,8 @@ exclude_lines = [
 [tool.ruff]
 # Line length mirrors the template default (88). The monorepo root config does
 # not reach four levels deep, so the package carries its own lint settings.
+# The vendored copies are byte-identical to upstream and must stay that way.
+extend-exclude = ["vendor"]
 line-length = 88
 target-version = "py310"
 
@@ -80,6 +82,8 @@ target-version = "py310"
 # Project-local mypy settings (the monorepo root config has no mypy_path for
 # this package's src/ layout). Mirrors the root gates: strict-ish typing,
 # explicit package bases, ignore missing stubs.
+# Vendored copies are a dependency; their bytes are bound by scripts/vendor.py.
+exclude = ["(^|/)vendor/"]
 python_version = "3.12"
 mypy_path = ["src"]
 explicit_package_bases = true
