@@ -72,16 +72,20 @@ resolves 76 variables, and the lineage grep is clean.
   constants now documents `_scenario()` + `build_mission_scenario()`; the
   manuscript-variables section documents the fail-closed accessors.
 
-### Gate numbers (this working tree, re-measured)
+### Gate numbers (this working tree)
+
+Re-measured 2026-11-04 after the vendoring pass; the pre-change figures were
+405 passed / 17 mypy source files / 41 formatted files.
 
 | Command | Result |
 |---|---|
-| `uv run pytest tests/ --cov=src --cov-fail-under=90` | 405 passed, 0 failed, 0 skipped; 100.00% (floor 90%) |
+| `uv run pytest tests/ --cov=src --cov-fail-under=90` | 406 passed, 0 failed, 0 skipped; 100.00% (floor 90%) |
 | `uv run ruff check src/ scripts/ tests/` | All checks passed |
-| `uv run ruff format --check src/ scripts/ tests/` | clean |
-| `uv run mypy src/ scripts/` | Success: no issues in 17 source files |
+| `uv run ruff format --check src/ scripts/ tests/` | 43 files already formatted |
+| `uv run mypy src/ scripts/` | Success: no issues in 18 source files |
 | `z_generate_manuscript_variables.py` | Resolved 76 variables, exit 0 |
 | lineage grep | clean |
+| `scripts/vendor.py --check` | `vendor/bond-api: ok`, `vendor/bond-utilities: ok`, 0 findings |
 
 ### Left for a future round
 
@@ -199,13 +203,13 @@ uv run python scripts/z_generate_manuscript_variables.py   # strict token gate
 rg -n "template[_]code_project" . --glob '!uv.lock' --glob '!.git/**' || echo clean
 ```
 
-Expected outcomes, re-measured 2026-10-25:
+Expected outcomes, re-measured 2026-11-04 (was 2026-10-25):
 
 | Command | Expected |
 | --- | --- |
-| `pytest … --cov-fail-under=90` | `405 passed`, `Total coverage: 100.00%` (floor 90%) |
-| `ruff check` / `ruff format --check` | `All checks passed!` / `41 files already formatted` |
-| `mypy src/ scripts/` | `Success: no issues found in 17 source files` |
+| `pytest … --cov-fail-under=90` | `406 passed`, `Total coverage: 100.00%` (floor 90%) |
+| `ruff check` / `ruff format --check` | `All checks passed!` / `43 files already formatted` |
+| `mypy src/ scripts/` | `Success: no issues found in 18 source files` |
 | `z_generate_manuscript_variables.py` | `Resolved 76 manuscript variables -> output/data/manuscript_variables.json`, exit 0 |
 | lineage grep | `clean` |
 | `git status --short` | empty after commit |
@@ -214,3 +218,34 @@ If `uv` reports `Failed to initialize cache at ~/.cache/uv` that is a sandbox
 restriction, not a package failure — re-run the same command with the sandbox
 disabled. Re-measure rather than quoting: the headline numbers above and in
 `docs/_generated/COUNTS.md` are only valid until the next change.
+
+## Vendoring wave (2026-11-04)
+
+`bond-api` and `bond-utilities` now ship as recorded copies under `vendor/`
+(upstream `c0362ff0c9d7` with payload `aggregate_sha256 2e8fa087be…`, 10 files;
+`a1acbe4a73e4` with `961c0b8d32…`, 14 files), `[tool.uv.sources]` points at
+them, and `uv.lock` is regenerated from that declaration: `uv lock --check`
+rc=1 → rc=0, the regenerated lock byte-identical across two runs
+(`fc3bd76ada320cb4`) and unchanged by `--refresh`, 8 changed lines in 3 moved
+blocks, **0 sibling references and 4 `vendor/` references**. The 32 changed
+paths' git-clean blob set was verified 32/32 against the patch's
+`copied_paths`; `scripts/vendor.py --check` reports both copies `ok` with 0
+findings, and the suite runs that check via `tests/test_vendor_provenance.py`.
+
+| # | Observation | Evidence |
+|---|---|---|
+| W1 | Two false inheritance comments and one unverifiable width rationale, corrected in place. | `pyproject.toml` said "Inherits workspace settings from root pyproject.toml" twice and justified 88 as "the template default". Measured: the only other `pyproject.toml` above this one (the vault manager's) declares **no** `[tool.ruff]`/`[tool.mypy]` settings and no `[tool.uv.workspace]` — uv merges no parent config outside a workspace — and 88 is the width this tree is written to (documented format gate clean at 88; 25 files would be reformatted at 120) as well as ruff's own default. |
+| W2 | A template-era suite path in three documents, corrected. | `AGENTS.md`, `README.md` and the in-repo skill pointed at `projects/working/bond/…`. Measured 2026-11-04: that directory does not exist on this machine; the sibling packages match `../bond-*` (33 directories). The corrected text states the measured layout. |
+| W3 | Dependency-resolution prose across five files, corrected to the recorded copies. | `AGENTS.md` (×2: the protocol-integration paragraph and the setup line), `README.md` (the sync paragraph, which additionally claimed the sources pinned "the absolute monorepo paths" while the declaration was the relative `../bond-api` — false before this change and moot after it), `docs/architecture.md` (both dependency bullets plus "Both resolve from the same local-only suite tree"), `docs/testing_philosophy.md`, and the `[tool.uv.sources]` comment itself. One literal `../bond-api` remains in code, in a docstring of the bundled checker (`scripts/vendor.py:53`), whose bytes are bound by `checker_sha256`; it is left as a stated residual. |
+| W4 | The generated exclusions are load-bearing here — measured with a two-arm control, table kept in `pyproject.toml` and only its body varying. | As committed: whole-tree `ruff check .` rc=0 with **0** findings under `vendor/`, whole-tree `ruff format --check .` rc=0 with 68 files already formatted. With the single `extend-exclude = ["vendor"]` line removed: `ruff check .` rc=1 with **11 findings, all 11 under `vendor/`**, and `ruff format --check .` rc=1 with **8 files would be reformatted** (all vendored). The mypy `exclude` line's effect was measured separately on a whole-tree run: `mypy .` reports 31 errors in 5 files (34 checked) with it and 33 errors in 7 files (52 checked) without it, 2 of them under `vendor/`. Neither whole-tree run is the documented gate (`mypy src/ scripts/`, rc=0). |
+| W5 | **A hard rule the tree does not satisfy, measured and corrected in place.** | `AGENTS.md` required "Regenerating `output/` twice must be byte-identical" and `docs/architecture.md` called git-cleanliness "itself a determinism proof". Measured: consecutive runs differ (whole-`output/` digest `5109e895ad93bdf4` vs `48dab29da800592e`), entirely in `output/figures/pipeline_network.png`, whose bytes differ on **every** run (three runs, three hashes; the difference is in the PNG's `IDAT` payload, not its metadata) — because `figures.py` places intermediate nodes with `hash(node)`, randomized per process. Control: with `PYTHONHASHSEED=0` two runs are byte-identical (`c4289cc298030a74`, reproduced three times) and the other three figures are byte-stable either way. Pre-existing at both ends; the prose is corrected, the code defect is left to its own change. |
+| W6 | The live expectations and the generated counts refreshed. | `ruff format` without `--check` (not a check) corrected in `AGENTS.md`'s lint rule — the only such copy: the Verify block there and the other four documents already used `--check`; both expectation tables in this file re-dated (406 passed at 100.00%, 43 formatted files, 18 mypy source files, 76 tokens, lineage `clean`); `docs/_generated/COUNTS.md` regenerated from the real run and carrying the measurement caveats W4/W5 raise. |
+
+End-to-end evidence at the branch tip: gate 1 rc=0, 406 passed at 100.00%
+(1296/392, floor 90%); mocks rc=1 with 0 hits; the lineage audit (already
+written bracket-split here — `rg -n "template[_]code_project"`, documented in
+`AGENTS.md` and `docs/agent_instructions.md`) rc=1 with 0 hits in **both**
+spellings; `ruff check` rc=0; `ruff format --check` 43 files; whole-tree check
+and format rc=0; mypy 18 files in both spellings; `brief`/`recon`/`plan`/
+`execute`/`debrief`/`generate_figures` and the token gate all rc=0 with 15
+output files; `git status` clean.

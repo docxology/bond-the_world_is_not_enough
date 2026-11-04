@@ -1,0 +1,75 @@
+# BOND suite — bond-utilities (Layer 0, Q-BRANCH primitives)
+# Shared foundation for every bond package: stdlib + numpy/matplotlib/pyyaml only.
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bond-utilities"
+version = "0.3.0"
+license = {text = "MIT"}
+description = "Q-Branch field utility library: ciphers, codenames, mission clock, seeded randomness, mission records, reporting"
+authors = [
+    {name = "Daniel Ari Friedman", email = "daniel@activeinference.institute"}
+]
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.24.0",
+    "matplotlib>=3.7.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short --strict-markers"
+
+[tool.mypy]
+# `scripts/` inject `src/` onto sys.path at runtime; mypy needs the same hint
+# so `uv run mypy src/ scripts/` type-checks the thin orchestrators too.
+mypy_path = "src"
+warn_unused_ignores = false
+warn_redundant_casts = true
+warn_unused_configs = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+# Default ruff rules plus E501 so the documented 120-column limit is enforced,
+# and I (isort) so import order stays stable across the suite.
+select = ["E4", "E7", "E9", "E501", "F", "I"]
+
+[tool.coverage.run]
+# Coverage is measured over the whole src/ tree (the bond_utilities package).
+source = ["src"]
+branch = true
+omit = [
+    "tests/*",
+    "*/__init__.py",
+    "*/test_*.py",
+]
+
+[tool.coverage.report]
+# ≥90% line+branch on src/ is the enforced BOND quality gate.
+fail_under = 90
+show_missing = true
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+]
+
+[tool.uv]
+# Working tree; install with: uv sync --extra dev

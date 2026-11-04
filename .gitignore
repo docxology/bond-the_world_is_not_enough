@@ -13,3 +13,6 @@ __pycache__/
 
 # Regenerable artifacts — the full pipeline reproduces output/ deterministically.
 output/
+
+# Build output the vendored copies' own builds write into vendor/.
+vendor/**/build/

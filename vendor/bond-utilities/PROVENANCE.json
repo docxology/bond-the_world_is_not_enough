@@ -1,0 +1,40 @@
+{
+  "package": "bond-utilities",
+  "module_path": "src/bond_utilities",
+  "source_repository": "docxology/bond-utilities",
+  "sha": "a1acbe4a73e4e4c7c282b9c91c2ec8815f3f783f",
+  "copied_paths": [
+    "LICENSE",
+    "README.md",
+    "pyproject.toml",
+    "src/bond_utilities/__init__.py",
+    "src/bond_utilities/ciphers.py",
+    "src/bond_utilities/clock.py",
+    "src/bond_utilities/codenames.py",
+    "src/bond_utilities/figures/__init__.py",
+    "src/bond_utilities/figures/plots.py",
+    "src/bond_utilities/manuscript_variables.py",
+    "src/bond_utilities/mission_io.py",
+    "src/bond_utilities/randomness.py",
+    "src/bond_utilities/reporting.py",
+    "src/bond_utilities/testing.py"
+  ],
+  "sha256": {
+    "LICENSE": "72f87c6cb562ffc6f870dc124d86b45ee0df5460e83fe8443d8e2ae65777e978",
+    "README.md": "1a4eb063299fb8bb9b38379978775d39b6035b36ad4b3e9666c7e2d2698a9e41",
+    "pyproject.toml": "36aa47072a6e9491825df1689ce8016b115ba2476ece63a444c7295d4a78fa5e",
+    "src/bond_utilities/__init__.py": "0108876e8640a0beea5850ebae43f0c441d9852ccbaca193a77b7a43ef83ee4b",
+    "src/bond_utilities/ciphers.py": "a04048df57e3595ae67347ab9aff3a0043753797b5bd0fbc64e65167e0e961c5",
+    "src/bond_utilities/clock.py": "58e8fd2f98e57ae239413ab522aedf51335e850576e05ce05a8ade7f87249630",
+    "src/bond_utilities/codenames.py": "7a285346642585fd9062c73ea3c44531f8cf3123b09c81a7440bebcba02a8ddb",
+    "src/bond_utilities/figures/__init__.py": "9b88ad622934fcb0d0b20eb3687d7f47ed9da571f0596c494fdd67f05865254d",
+    "src/bond_utilities/figures/plots.py": "e65da1a06114eceb3b851265a634d717825ea16204c4453df4e8c9597fbd6683",
+    "src/bond_utilities/manuscript_variables.py": "a8fc924906515dd7fa6ea382a4b2d58222a66584aced22016393131183806db2",
+    "src/bond_utilities/mission_io.py": "34b7b3ab9d85cf79790f6f54207e8e4e42c1258e3e60535f16d82c71e28b5a9e",
+    "src/bond_utilities/randomness.py": "333b875dd4e96a6037254df615d3672eb85944558cc824d7b4952405300500f3",
+    "src/bond_utilities/reporting.py": "201362a98583f91cd70846b932dacee68a1ec8f964bef0b12fe5fbfaf186097d",
+    "src/bond_utilities/testing.py": "d55f022515f3a776110bb4cdb7b71269032feaf94682e07adf971db75f4521ac"
+  },
+  "aggregate_sha256": "961c0b8d320ec2df074804443767c4c82512d98ef66436be2c49013775dbf28a",
+  "checker_sha256": "e7b56b3e35eed834ac1061152fb8438f976c03be50484b8345bbac46d2cebc8d"
+}
