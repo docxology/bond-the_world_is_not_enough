@@ -249,3 +249,7 @@ spellings; `ruff check` rc=0; `ruff format --check` 43 files; whole-tree check
 and format rc=0; mypy 18 files in both spellings; `brief`/`recon`/`plan`/
 `execute`/`debrief`/`generate_figures` and the token gate all rc=0 with 15
 output files; `git status` clean.
+
+## Workflowz review — 2026-11-10
+
+No new actionable finding survived this bounded, read-only review. Coverage included the root guidance, README, existing TODO, Python/runtime and dependency declarations, package exports, the supplied pipeline/negotiation/sensor-fusion production excerpts, and the plan CLI. The visible production code contains no concrete silent mock/fallback/fake/stub substitute to flag; the documented tamper upper bound, sequential cascade, position-fix tracking, and bargaining assumptions are already tracked as E1–E5 or known limitations rather than duplicated here. The exact visible pins are `.python-version` = `3.15`, `pyproject.toml:18` = `requires-python = ">=3.11"`, `pyproject.toml:83` = Ruff `target-version = "py310"`, and `pyproject.toml:91` = mypy `python_version = "3.12"`; the packet supplies no dependency, deployment, fixture, or reproducibility evidence establishing a concrete failure or a required version change, so no blind runtime upgrade is proposed. Re-review when one of these inspected contracts produces a concrete failure or when the relevant production source changes.
