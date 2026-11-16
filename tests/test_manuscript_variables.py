@@ -7,7 +7,7 @@ import re
 import subprocess
 import sys
 import time
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -100,7 +100,7 @@ class TestGenerateVariables:
         date into the token set; this pins that it is absent.
         """
         config = yaml.safe_load(CONFIG.read_text(encoding="utf-8"))
-        today = datetime.now(timezone.utc).date().isoformat()
+        today = datetime.now(UTC).date().isoformat()
         if str(config["paper"]["date"]) == today:
             pytest.skip("config date is today; the negative control cannot bind")
         variables = MV.generate_variables()
@@ -132,7 +132,7 @@ class TestGenerateVariables:
 
     def test_edition_stamp_accepts_a_yaml_datetime(self) -> None:
         assert (
-            MV.edition_stamp({"date": datetime(2026, 8, 4, 9, 30, tzinfo=timezone.utc)})
+            MV.edition_stamp({"date": datetime(2026, 8, 4, 9, 30, tzinfo=UTC)})
             == "2026-08-04T00:00:00+00:00"
         )
 
@@ -826,7 +826,7 @@ class TestRegenerationDeterminism:
         def write(out: Path) -> dict[str, bytes]:
             target = out / "data" / "manuscript_variables.json"
             target.parent.mkdir(parents=True, exist_ok=True)
-            stamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+            stamp = datetime.now(UTC).isoformat(timespec="seconds")
             target.write_text(
                 json.dumps({"MANUSCRIPT_EDITION_STAMP": stamp}), encoding="utf-8"
             )

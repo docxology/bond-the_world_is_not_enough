@@ -710,9 +710,9 @@ def edition_stamp(paper: dict[str, Any]) -> str:
         date = raw
     else:
         date = _dt.date.fromisoformat(str(raw).strip())
-    return _dt.datetime(
-        date.year, date.month, date.day, tzinfo=_dt.timezone.utc
-    ).isoformat(timespec="seconds")
+    return _dt.datetime(date.year, date.month, date.day, tzinfo=_dt.UTC).isoformat(
+        timespec="seconds"
+    )
 
 
 def generate_variables(

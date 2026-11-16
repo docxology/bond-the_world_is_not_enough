@@ -80,7 +80,7 @@ exclude_lines = [
 # The vendored copies are byte-identical to upstream and must stay that way.
 extend-exclude = ["vendor"]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 
 [tool.mypy]
 # Project-local mypy settings: no ancestor pyproject.toml declares any mypy
