@@ -3,6 +3,30 @@
 *The World Is Not Enough* (1999) · mission codename **ELEKTRA** · a BOND suite
 film package.
 
+## Mission model
+
+```mermaid
+flowchart TD
+    accTitle: ELEKTRA implemented mission analyses
+    accDescr: Pipeline, power grid, submarine sensors and hostage parameters feed Pipeline choke points and cascading power failures; Sonar-risk evasion and Kalman tracking; Hostage dynamics and bargaining analysis. The mission adapter returns infrastructure, evasion, tracking and negotiation metrics with provenance, then a debrief.
+    I["Pipeline, power grid, submarine sensors and hostage parameters"]
+    G0["Pipeline choke points and cascading power failures"]
+    I --> G0
+    G1["Sonar-risk evasion and Kalman tracking"]
+    I --> G1
+    G2["Hostage dynamics and bargaining analysis"]
+    I --> G2
+    O["mission.py: execute returns MissionOutcome<br/>Infrastructure, evasion, tracking and negotiation metrics and provenance"]
+    G0 --> O
+    G1 --> O
+    G2 --> O
+    O --> F["debrief: mission summary"]
+```
+
+The branches group implemented capabilities; they do not imply a runtime order.
+
+**Source map:** [`pipeline_security.py`](src/the_world_is_not_enough/pipeline_security.py), [`power_grid.py`](src/the_world_is_not_enough/power_grid.py); [`sub_defense.py`](src/the_world_is_not_enough/sub_defense.py), [`sensor_fusion.py`](src/the_world_is_not_enough/sensor_fusion.py); [`hostage_psychology.py`](src/the_world_is_not_enough/hostage_psychology.py), [`negotiation_tactics.py`](src/the_world_is_not_enough/negotiation_tactics.py); [`mission.py`](src/the_world_is_not_enough/mission.py).
+
 Deterministic special-agent mission software modeling six operational pillars
 drawn from the film:
 
