@@ -1,5 +1,7 @@
 # docs/ — the_world_is_not_enough (ELEKTRA)
 
+[Package maintenance](package-maintenance.md) covers dependency and release records.
+
 Documentation for the ELEKTRA film package: *The World Is Not Enough* (1999)
 rendered as deterministic special-agent mission software across six pillars —
 oil-pipeline choke-point security, passive-sonar evasion, Stockholm-syndrome
