@@ -1,5 +1,7 @@
 # docs/ — agent rules
 
+[Package maintenance](package-maintenance.md) identifies the dependency and citation records.
+
 Directory-scoped rules for editing files under `docs/`. The package-wide hard
 rules live in [`../AGENTS.md`](../AGENTS.md); the operational constraints for
 changing code live in [`agent_instructions.md`](agent_instructions.md). Those
