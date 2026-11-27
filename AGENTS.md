@@ -1,5 +1,8 @@
 # AGENTS.md — the_world_is_not_enough (ELEKTRA)
 
+The [package maintenance guide](docs/package-maintenance.md) records the
+distribution identity, Python selection, dependency provenance, and citation metadata.
+
 This is an active BOND suite film package; its sibling packages sit beside it
 (measured 2026-11-04: `../bond-*` matches 33 directories; the template-era
 `projects/working/bond/` path no longer exists on this machine).
